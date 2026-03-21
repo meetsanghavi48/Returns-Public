@@ -3,7 +3,13 @@
 
 name = "Returns Manager"
 handle = "returns-manager"
+client_id = "7450d42da8f67ceda10723799de7f45d"
+application_url = "https://returns-public.onrender.com"
 embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = ""
 
 [access_scopes]
 scopes = "read_orders,write_orders,read_products,write_products,read_draft_orders,write_draft_orders,read_customers,write_customers,read_inventory,write_inventory"
@@ -22,7 +28,7 @@ api_version = "2025-01"
   uri = "/webhooks"
 
 [app_proxy]
-url = "/portal"
+url = "https://returns-public.onrender.com/portal"
 subpath = "returns"
 prefix = "apps"
 
