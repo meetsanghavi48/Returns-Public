@@ -10,8 +10,8 @@ scopes = "read_orders,write_orders,read_products,write_products,read_draft_order
 
 [auth]
 redirect_urls = [
-  "https://localhost/auth/callback",
-  "https://localhost/auth/shopify/callback",
+  "https://returns-public.onrender.com/auth/callback",
+  "https://returns-public.onrender.com/auth/shopify/callback",
 ]
 
 [webhooks]
