@@ -1,0 +1,30 @@
+# Shopify App Configuration
+# Learn more: https://shopify.dev/docs/apps/tools/cli/configuration
+
+name = "Returns Manager"
+handle = "returns-manager"
+embedded = true
+
+[access_scopes]
+scopes = "read_orders,write_orders,read_products,write_products,read_draft_orders,write_draft_orders,read_customers,write_customers,read_inventory,write_inventory"
+
+[auth]
+redirect_urls = [
+  "https://localhost/auth/callback",
+  "https://localhost/auth/shopify/callback",
+]
+
+[webhooks]
+api_version = "2025-01"
+
+  [[webhooks.subscriptions]]
+  topics = ["app/uninstalled"]
+  uri = "/webhooks"
+
+[app_proxy]
+url = "/portal"
+subpath = "returns"
+prefix = "apps"
+
+[pos]
+embedded = false

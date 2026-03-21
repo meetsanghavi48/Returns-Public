@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Shopify session storage (required by @shopify/shopify-app-session-storage-prisma)
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+}
+
+// Installed shops with per-shop configuration
+model Shop {
+  id                 String    @id @default(uuid())
+  shop               String    @unique // e.g. "store.myshopify.com"
+  accessToken        String
+  scopes             String
+  installedAt        DateTime  @default(now())
+  uninstalledAt      DateTime?
+  // Delhivery config
+  delhiveryToken     String?
+  delhiveryWarehouse String?
+  // Easebuzz config
+  easebuzzKey        String?
+  easebuzzSalt       String?
+  easebuzzMid        String?
+  easebuzzEnv        String    @default("test")
+  // Warehouse details
+  warehouseName      String?
+  warehouseAddress   String?
+  warehouseCity      String?
+  warehouseState     String?
+  warehousePincode   String?
+  warehousePhone     String?
+}
+
+// Core return/exchange requests
+model ReturnRequest {
+  id                  String    @id @default(uuid())
+  shop                String
+  reqId               String    @unique @default(uuid())
+  reqNum              Int?
+  orderId             String
+  orderNumber         String?
+  customerName        String?
+  customerEmail       String?
+  items               Json      @default("[]")
+  refundMethod        String?   // "original" | "store_credit"
+  shippingPreference  String    @default("pickup")
+  status              String    @default("pending") // pending, approved, pickup_scheduled, in_transit, delivered, refunded, exchanged, rejected, archived
+  requestType         String    @default("return") // return | exchange | mixed
+  totalPrice          Decimal   @default(0) @db.Decimal(10, 2)
+  address             Json?
+  isCod               Boolean   @default(false)
+  daysSinceOrder      Int       @default(0)
+  // AWB tracking
+  awb                 String?
+  awbStatus           String?
+  awbStatusCode       String?
+  awbLastScan         Json?
+  awbLastChecked      DateTime?
+  awbFinal            Boolean   @default(false)
+  // Exchange details
+  exchangeOrderId     String?
+  exchangeOrderName   String?
+  exchangeOrderNumber String?
+  exchangeShopifyName String?
+  // Refund details
+  refundId            String?
+  refundAmount        Decimal?  @db.Decimal(10, 2)
+  utrNumber           String?
+  // Auto-action tracking
+  autoAction          String?
+  // Timestamps
+  submittedAt         DateTime  @default(now())
+  approvedAt          DateTime?
+  pickupCreatedAt     DateTime?
+  archivedAt          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([shop, orderId])
+  @@index([shop, status])
+  @@index([shop, awb])
+  @@index([shop, approvedAt])
+  @@index([shop, createdAt(sort: Desc)])
+}
+
+// Per-shop exchange order numbering
+model ExchangeCounter {
+  id         String @id @default(uuid())
+  shop       String @unique
+  lastNumber Int    @default(9000)
+}
+
+// Audit trail for compliance
+model AuditLog {
+  id        String   @id @default(uuid())
+  shop      String
+  orderId   String?
+  reqId     String?
+  action    String
+  actor     String?
+  details   String?
+  createdAt DateTime @default(now())
+
+  @@index([shop, orderId])
+  @@index([shop, createdAt(sort: Desc)])
+}
+
+// Per-shop key-value settings
+model Settings {
+  id        String   @id @default(uuid())
+  shop      String
+  key       String
+  value     Json
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([shop, key])
+  @@index([shop])
+}
+
+// Easebuzz payment records
+model Payment {
+  id          String   @id @default(uuid())
+  shop        String
+  txnid       String   @unique
+  reqId       String?
+  orderId     String
+  amount      Decimal  @db.Decimal(10, 2)
+  status      String   @default("pending") // pending, success, failed
+  txnResponse Json?
+  createdAt   DateTime @default(now())
+
+  @@index([shop, orderId])
+  @@index([shop, reqId])
+}
