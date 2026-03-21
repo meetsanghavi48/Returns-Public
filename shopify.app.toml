@@ -1,31 +1,33 @@
-# Shopify App Configuration
-# Learn more: https://shopify.dev/docs/apps/tools/cli/configuration
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-name = "Returns Manager"
-handle = "returns-manager"
 client_id = "7450d42da8f67ceda10723799de7f45d"
+name = "Public Returns Prime"
 application_url = "https://returns-public.onrender.com"
 embedded = true
+handle = "returns-public-prime"
 
 [build]
 automatically_update_urls_on_dev = true
-dev_store_url = ""
+dev_store_url = "my-returns-test.myshopify.com"
+
+[webhooks]
+api_version = "2026-01"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks"
 
 [access_scopes]
-scopes = "read_orders,write_orders,read_products,write_products,read_draft_orders,write_draft_orders,read_customers,write_customers,read_inventory,write_inventory"
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_customers,write_customers,write_draft_orders,read_draft_orders,write_inventory,read_inventory,read_orders,write_orders,read_products,write_products"
+optional_scopes = [ ]
+use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
   "https://returns-public.onrender.com/auth/callback",
-  "https://returns-public.onrender.com/auth/shopify/callback",
+  "https://returns-public.onrender.com/auth/shopify/callback"
 ]
-
-[webhooks]
-api_version = "2025-01"
-
-  [[webhooks.subscriptions]]
-  topics = ["app/uninstalled"]
-  uri = "/webhooks"
 
 [app_proxy]
 url = "https://returns-public.onrender.com/portal"
