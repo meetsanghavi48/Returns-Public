@@ -126,57 +126,7 @@ export async function submitReturnRequest(
     0,
   );
 
-  // Check for existing request on this order
-  const existing = await prisma.returnRequest.findFirst({
-    where: {
-      shop,
-      orderId: data.orderId,
-      status: { notIn: ["archived", "rejected"] },
-    },
-  });
-
-  if (existing) {
-    // Merge items into existing request
-    const existingItems = (existing.items as any[]) || [];
-    const mergedItems = [...existingItems];
-    for (const newItem of items) {
-      const idx = mergedItems.findIndex(
-        (ei) => String(ei.id) === String(newItem.id),
-      );
-      if (idx >= 0) {
-        mergedItems[idx] = newItem;
-      } else {
-        mergedItems.push(newItem);
-      }
-    }
-
-    await prisma.returnRequest.update({
-      where: { reqId: existing.reqId },
-      data: {
-        items: mergedItems as any,
-        requestType,
-        totalPrice: mergedItems.reduce(
-          (s, i) => s + parseFloat(i.price || 0) * (parseInt(i.qty) || 1),
-          0,
-        ),
-        refundMethod: data.refundMethod || existing.refundMethod,
-        address: (data.address || existing.address) as any,
-      },
-    });
-
-    await auditLog(
-      shop,
-      data.orderId,
-      existing.reqId,
-      "request_updated",
-      "customer",
-      `Merged ${items.length} items`,
-    );
-
-    return existing.reqId;
-  }
-
-  // Create new request
+  // Always create a new request (multiple returns per order allowed)
   const tag =
     requestType === "exchange"
       ? "exchange-requested"

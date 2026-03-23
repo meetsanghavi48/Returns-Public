@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { useActionData, Form, useNavigation } from "@remix-run/react";
+import { useActionData, Form, useNavigation, Link, useParams } from "@remix-run/react";
 import prisma from "../db.server";
 import { shopifyREST } from "../services/shopify.server";
 import { getSetting } from "../services/settings.server";
@@ -49,8 +49,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     });
   }
 
-  // Check for existing active return
-  const existingReturn = await prisma.returnRequest.findFirst({
+  // Find existing active returns for this order — collect already-returned item IDs
+  const existingReturns = await prisma.returnRequest.findMany({
     where: {
       shop: shopDomain,
       orderId: String(order.id),
@@ -58,8 +58,21 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     },
   });
 
-  if (existingReturn) {
-    return redirect(`/portal/${shopDomain}/tracking/${existingReturn.reqId}`);
+  const returnedItemIds: string[] = [];
+  for (const ret of existingReturns) {
+    const items = (ret.items as any[]) || [];
+    for (const item of items) {
+      returnedItemIds.push(String(item.id));
+    }
+  }
+
+  // Check if ALL items are already in active returns
+  const allLineItemIds = (order.line_items || []).map((li: any) => String(li.id));
+  const allReturned = allLineItemIds.length > 0 && allLineItemIds.every((id: string) => returnedItemIds.includes(id));
+
+  if (allReturned && existingReturns.length > 0) {
+    // All items already have active returns — redirect to the latest one
+    return redirect(`/portal/${shopDomain}/tracking/${existingReturns[0].reqId}`);
   }
 
   // Pass order data to next step via URL params (encoded)
@@ -74,6 +87,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       financial_status: order.financial_status,
       days_since: daysSince,
       is_cod: (order.financial_status || "").toLowerCase().includes("pending"),
+      returned_item_ids: returnedItemIds,
       line_items: (order.line_items || []).map((li: any) => ({
         id: String(li.id),
         title: li.title,
@@ -94,14 +108,17 @@ export default function PortalLookup() {
   const actionData = useActionData<any>();
   const navigation = useNavigation();
   const isLoading = navigation.state === "submitting";
+  const { shop } = useParams();
 
   return (
     <>
-      <div className="portal-steps">
-        <div className="portal-step active" />
-        <div className="portal-step" />
-        <div className="portal-step" />
-        <div className="portal-step" />
+      {/* Breadcrumb navigation */}
+      <div className="portal-breadcrumbs">
+        <span className="portal-breadcrumb active">Find Order</span>
+        <span className="portal-breadcrumb-sep">›</span>
+        <span className="portal-breadcrumb">Select Items</span>
+        <span className="portal-breadcrumb-sep">›</span>
+        <span className="portal-breadcrumb">Confirm</span>
       </div>
 
       <div className="portal-card">
@@ -145,6 +162,15 @@ export default function PortalLookup() {
             {isLoading ? "Looking up..." : "Find My Order"}
           </button>
         </Form>
+      </div>
+
+      <div style={{ textAlign: "center", marginTop: 16 }}>
+        <Link
+          to={`/portal/${shop}/tracking`}
+          style={{ color: "var(--portal-accent)", fontSize: 14, fontWeight: 500, textDecoration: "none" }}
+        >
+          Already submitted a return? Track your requests →
+        </Link>
       </div>
     </>
   );

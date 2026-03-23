@@ -163,6 +163,10 @@ export default function ReturnDetail() {
   const r = returnReq as any;
   const items = (r.items || []) as any[];
 
+  const returnIdPrefix = r.requestType === "exchange" ? "EXC" : r.requestType === "mixed" ? "MIX" : "RET";
+  const returnIdSuffix = (r.reqId || "").slice(-6).toUpperCase();
+  const displayReturnId = `${returnIdPrefix}-${returnIdSuffix}`;
+
   const doAction = (intent: string, extra?: Record<string, string>) => {
     const formData = new FormData();
     formData.set("intent", intent);
@@ -176,8 +180,8 @@ export default function ReturnDetail() {
 
   return (
     <Page
-      title={`Return #${r.orderNumber || r.orderId}`}
-      subtitle={`Request: ${r.reqId}`}
+      title={`${displayReturnId} — Order #${r.orderNumber || r.orderId}`}
+      subtitle={`${r.customerName || ""} • ${r.customerEmail || ""}`}
       backAction={{ url: "/app/returns" }}
     >
       <Layout>

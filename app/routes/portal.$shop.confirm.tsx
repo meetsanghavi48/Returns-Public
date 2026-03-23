@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { useLoaderData, Form, useActionData, useNavigation } from "@remix-run/react";
+import { useLoaderData, Form, useActionData, useNavigation, useNavigate } from "@remix-run/react";
 import { useState } from "react";
 import prisma from "../db.server";
 import { submitReturnRequest } from "../services/returns.server";
@@ -63,6 +63,7 @@ export default function PortalConfirm() {
   const actionData = useActionData<any>();
   const navigation = useNavigation();
   const isLoading = navigation.state === "submitting";
+  const nav = useNavigate();
   const [refundMethod, setRefundMethod] = useState("original");
 
   const selectedItems = data.selected_items || [];
@@ -79,11 +80,25 @@ export default function PortalConfirm() {
 
   return (
     <>
-      <div className="portal-steps">
-        <div className="portal-step done" />
-        <div className="portal-step done" />
-        <div className="portal-step active" />
-        <div className="portal-step" />
+      {/* Breadcrumb navigation */}
+      <div className="portal-breadcrumbs">
+        <span className="portal-breadcrumb done" onClick={() => nav(`/portal/${shop}`)}>
+          Find Order
+        </span>
+        <span className="portal-breadcrumb-sep">›</span>
+        <span className="portal-breadcrumb done" onClick={() => nav(-hasExchange ? 2 : 1)}>
+          Select Items
+        </span>
+        {hasExchange && (
+          <>
+            <span className="portal-breadcrumb-sep">›</span>
+            <span className="portal-breadcrumb done" onClick={() => nav(-1)}>
+              Exchange
+            </span>
+          </>
+        )}
+        <span className="portal-breadcrumb-sep">›</span>
+        <span className="portal-breadcrumb active">Confirm</span>
       </div>
 
       <div className="portal-card">
@@ -187,18 +202,29 @@ export default function PortalConfirm() {
         </p>
       </div>
 
-      {/* Submit */}
-      <Form method="post">
-        <input type="hidden" name="orderData" value={JSON.stringify(data)} />
-        <input type="hidden" name="refundMethod" value={refundMethod} />
+      {/* Navigation */}
+      <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
         <button
-          className="portal-btn portal-btn-primary"
-          type="submit"
-          disabled={isLoading}
+          className="portal-btn"
+          onClick={() => nav(-1)}
+          type="button"
+          style={{ flex: 1 }}
         >
-          {isLoading ? "Submitting..." : "Submit Return Request"}
+          ← Back
         </button>
-      </Form>
+        <Form method="post" style={{ flex: 2 }}>
+          <input type="hidden" name="orderData" value={JSON.stringify(data)} />
+          <input type="hidden" name="refundMethod" value={refundMethod} />
+          <button
+            className="portal-btn portal-btn-primary"
+            type="submit"
+            disabled={isLoading}
+            style={{ width: "100%" }}
+          >
+            {isLoading ? "Submitting..." : "Submit Return Request"}
+          </button>
+        </Form>
+      </div>
     </>
   );
 }

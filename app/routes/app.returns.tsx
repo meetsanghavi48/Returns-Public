@@ -146,6 +146,13 @@ export default function ReturnsList() {
     content: `${tab.content} (${counts[tab.id] || 0})`,
   }));
 
+  const getReturnId = (r: any) => {
+    const prefix = r.requestType === "exchange" ? "EXC" : r.requestType === "mixed" ? "MIX" : "RET";
+    // Use last 6 chars of reqId for uniqueness
+    const suffix = (r.reqId || "").slice(-6).toUpperCase();
+    return `${prefix}-${suffix}`;
+  };
+
   const rowMarkup = returns.map((r: any, index: number) => {
     const items = (r.items || []) as any[];
     return (
@@ -156,6 +163,11 @@ export default function ReturnsList() {
         position={index}
         onClick={() => navigate(`/app/returns/${r.reqId}`)}
       >
+        <IndexTable.Cell>
+          <Text variant="bodyMd" fontWeight="bold" as="span">
+            {getReturnId(r)}
+          </Text>
+        </IndexTable.Cell>
         <IndexTable.Cell>
           <Text variant="bodyMd" fontWeight="bold" as="span">
             #{r.orderNumber || r.orderId}
@@ -240,6 +252,7 @@ export default function ReturnsList() {
                 onSelectionChange={handleSelectionChange}
                 promotedBulkActions={promotedBulkActions}
                 headings={[
+                  { title: "Return ID" },
                   { title: "Order" },
                   { title: "Customer" },
                   { title: "Type" },

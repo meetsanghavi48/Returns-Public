@@ -114,6 +114,45 @@ body {
   background: var(--portal-success);
 }
 
+/* ── Breadcrumbs ── */
+.portal-breadcrumbs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.portal-breadcrumb {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--portal-text-muted);
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.portal-breadcrumb.done {
+  color: var(--portal-success);
+  cursor: pointer;
+}
+
+.portal-breadcrumb.done:hover {
+  background: rgba(45, 138, 78, 0.08);
+  text-decoration: underline;
+}
+
+.portal-breadcrumb.active {
+  color: var(--portal-accent);
+  font-weight: 600;
+}
+
+.portal-breadcrumb-sep {
+  color: var(--portal-border);
+  font-size: 14px;
+}
+
 /* ── Form Elements ── */
 .portal-input {
   width: 100%;
