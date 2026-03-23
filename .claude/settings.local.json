@@ -4,7 +4,11 @@
       "Bash(npm install:*)",
       "Bash(npx prisma:*)",
       "Bash(npx vite:*)",
-      "Bash(node -e \"const pkg = require\\(''./node_modules/@shopify/shopify-app-remix/package.json''\\); console.log\\(pkg.version\\)\")"
+      "Bash(node -e \"const pkg = require\\(''./node_modules/@shopify/shopify-app-remix/package.json''\\); console.log\\(pkg.version\\)\")",
+      "Bash(npm run:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(where npm:*)",
+      "Bash(where node:*)"
     ]
   }
 }

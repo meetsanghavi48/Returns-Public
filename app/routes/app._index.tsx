@@ -19,7 +19,7 @@ export default function AppIndex() {
         dangerouslySetInnerHTML={{
           __html: `
             (function() {
-              var url = "${appUrl}/admin/auth?shop=${shop}";
+              var url = "${appUrl}/admin-auth?shop=${shop}";
               try {
                 if (window.top !== window.self) {
                   window.open(url, "_top");
