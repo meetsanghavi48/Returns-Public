@@ -39,9 +39,9 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       orderId: orderData.id,
       orderNumber: String(orderData.order_number || orderData.name?.replace("#", "")),
       customerName: orderData.customer
-        ? `${orderData.customer.firstName || ""} ${orderData.customer.lastName || ""}`.trim()
+        ? `${orderData.customer.first_name || ""} ${orderData.customer.last_name || ""}`.trim()
         : orderData.shipping_address?.name || "",
-      customerEmail: orderData.customer?.email || "",
+      customerEmail: orderData.customer?.email || orderData.email || "",
       items: orderData.selected_items,
       refundMethod,
       shippingPreference: "pickup",

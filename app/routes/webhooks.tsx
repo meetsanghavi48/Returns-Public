@@ -16,7 +16,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // Mark shop as uninstalled (keep data for potential re-install)
       await prisma.shop.update({
         where: { shop },
-        data: { uninstalledAt: new Date() },
+        data: { uninstalledAt: new Date(), accessToken: "" },
       }).catch(() => {});
       break;
 

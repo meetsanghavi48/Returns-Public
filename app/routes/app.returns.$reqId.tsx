@@ -112,7 +112,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
       case "unarchive":
         await prisma.returnRequest.update({
-          where: { reqId },
+          where: { reqId, shop },
           data: { status: "delivered", archivedAt: null },
         });
         await auditLog(shop, null, reqId, "unarchived", "admin", "");
@@ -122,7 +122,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         const awb = formData.get("awb") as string;
         if (!awb) return json({ error: "AWB required" }, { status: 400 });
         await prisma.returnRequest.update({
-          where: { reqId },
+          where: { reqId, shop },
           data: {
             awb,
             awbStatus: "Manually attached",
@@ -137,7 +137,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         const utr = formData.get("utr") as string;
         if (!utr) return json({ error: "UTR required" }, { status: 400 });
         await prisma.returnRequest.update({
-          where: { reqId },
+          where: { reqId, shop },
           data: { utrNumber: utr },
         });
         await auditLog(shop, null, reqId, "utr_added", "admin", `UTR:${utr}`);
