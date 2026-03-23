@@ -72,6 +72,11 @@ export default function PortalConfirm() {
   );
   const address = data.shipping_address || {};
 
+  // Determine request type
+  const hasReturn = selectedItems.some((i: any) => i.action === "return");
+  const hasExchange = selectedItems.some((i: any) => i.action === "exchange");
+  const isExchangeOnly = hasExchange && !hasReturn;
+
   return (
     <>
       <div className="portal-steps">
@@ -101,6 +106,11 @@ export default function PortalConfirm() {
                 {item.variant_title || ""} &middot; Qty: {item.qty || 1} &middot;{" "}
                 <span style={{ textTransform: "capitalize" }}>{item.action}</span>
               </div>
+              {item.exchange_variant_title && (
+                <div className="portal-item-meta">
+                  Exchange to: {item.exchange_variant_title}
+                </div>
+              )}
               {item.reason && (
                 <div className="portal-item-meta">Reason: {item.reason}</div>
               )}
@@ -114,31 +124,54 @@ export default function PortalConfirm() {
         </div>
       </div>
 
-      {/* Refund Method */}
-      <div className="portal-card">
-        <h3>Refund Method</h3>
-        <div className="portal-toggle-group" style={{ marginTop: 8 }}>
-          <button
-            className={`portal-toggle ${refundMethod === "original" ? "active" : ""}`}
-            onClick={() => setRefundMethod("original")}
-            type="button"
-          >
-            Original Payment
-          </button>
-          <button
-            className={`portal-toggle ${refundMethod === "store_credit" ? "active" : ""}`}
-            onClick={() => setRefundMethod("store_credit")}
-            type="button"
-          >
-            Store Credit
-          </button>
+      {/* Refund Method - only show when there are return items */}
+      {!isExchangeOnly && (
+        <div className="portal-card">
+          <h3>Refund Method</h3>
+          <div className="portal-toggle-group" style={{ marginTop: 8 }}>
+            <button
+              className={`portal-toggle ${refundMethod === "original" ? "active" : ""}`}
+              onClick={() => setRefundMethod("original")}
+              type="button"
+            >
+              Original Payment
+            </button>
+            <button
+              className={`portal-toggle ${refundMethod === "store_credit" ? "active" : ""}`}
+              onClick={() => setRefundMethod("store_credit")}
+              type="button"
+            >
+              Store Credit
+            </button>
+          </div>
+          <p style={{ fontSize: 13, color: "var(--portal-text-muted)", marginTop: 8 }}>
+            {refundMethod === "original"
+              ? "Refund will be processed to your original payment method. A shipping fee may be deducted."
+              : "Receive store credit for the full amount. Can be used on future purchases."}
+          </p>
         </div>
-        <p style={{ fontSize: 13, color: "var(--portal-text-muted)", marginTop: 8 }}>
-          {refundMethod === "original"
-            ? "Refund will be processed to your original payment method. A shipping fee may be deducted."
-            : "Receive store credit for the full amount. Can be used on future purchases."}
-        </p>
-      </div>
+      )}
+
+      {/* Exchange info */}
+      {hasExchange && (
+        <div className="portal-card">
+          <h3>Exchange Details</h3>
+          {selectedItems
+            .filter((i: any) => i.action === "exchange")
+            .map((item: any, idx: number) => (
+              <div key={idx} style={{ marginTop: idx > 0 ? 12 : 4 }}>
+                <p style={{ fontSize: 14, fontWeight: 600 }}>{item.title}</p>
+                <p style={{ fontSize: 13, color: "var(--portal-text-muted)" }}>
+                  Current: {item.variant_title || "Default"} → Replacement:{" "}
+                  {item.exchange_variant_title || "Same variant"}
+                </p>
+              </div>
+            ))}
+          <p style={{ fontSize: 13, color: "var(--portal-text-muted)", marginTop: 12 }}>
+            Your exchange order will be created once the original items are picked up.
+          </p>
+        </div>
+      )}
 
       {/* Pickup Address */}
       <div className="portal-card">
