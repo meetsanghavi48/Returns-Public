@@ -148,9 +148,8 @@ export default function ReturnsList() {
 
   const getReturnId = (r: any) => {
     const prefix = r.requestType === "exchange" ? "EXC" : r.requestType === "mixed" ? "MIX" : "RET";
-    // Use last 6 chars of reqId for uniqueness
-    const suffix = (r.reqId || "").slice(-6).toUpperCase();
-    return `${prefix}-${suffix}`;
+    const num = r.reqNum ? String(r.reqNum).padStart(3, "0") : (r.reqId || "").slice(-6).toUpperCase();
+    return `${prefix}-${num}`;
   };
 
   const rowMarkup = returns.map((r: any, index: number) => {

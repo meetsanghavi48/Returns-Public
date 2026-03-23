@@ -111,6 +111,16 @@ model ExchangeCounter {
   lastNumber Int    @default(9000)
 }
 
+// Per-shop return request sequential numbering (separate counters per type)
+model ReturnCounter {
+  id         String @id @default(uuid())
+  shop       String
+  type       String @default("return") // "return" | "exchange" | "mixed"
+  lastNumber Int    @default(0)
+
+  @@unique([shop, type])
+}
+
 // Audit trail for compliance
 model AuditLog {
   id        String   @id @default(uuid())

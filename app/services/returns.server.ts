@@ -126,6 +126,14 @@ export async function submitReturnRequest(
     0,
   );
 
+  // Get sequential request number (separate per type)
+  const counter = await prisma.returnCounter.upsert({
+    where: { shop_type: { shop, type: requestType } },
+    update: { lastNumber: { increment: 1 } },
+    create: { shop, type: requestType, lastNumber: 1 },
+  });
+  const reqNum = counter.lastNumber;
+
   // Always create a new request (multiple returns per order allowed)
   const tag =
     requestType === "exchange"
@@ -140,6 +148,7 @@ export async function submitReturnRequest(
     data: {
       shop,
       reqId,
+      reqNum,
       orderId: data.orderId,
       orderNumber: data.orderNumber,
       customerName: data.customerName,
@@ -200,6 +209,14 @@ export async function submitManualRequest(
     0,
   );
 
+  // Get sequential request number (separate per type)
+  const counter = await prisma.returnCounter.upsert({
+    where: { shop_type: { shop, type: requestType } },
+    update: { lastNumber: { increment: 1 } },
+    create: { shop, type: requestType, lastNumber: 1 },
+  });
+  const reqNum = counter.lastNumber;
+
   const tag =
     requestType === "exchange"
       ? "exchange-requested"
@@ -212,6 +229,7 @@ export async function submitManualRequest(
     data: {
       shop,
       reqId,
+      reqNum,
       orderId: data.orderId,
       orderNumber: data.orderNumber,
       items: data.items as any,

@@ -37,7 +37,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 function getReturnId(r: any) {
   const prefix = r.requestType === "exchange" ? "EXC" : r.requestType === "mixed" ? "MIX" : "RET";
-  return `${prefix}-${(r.reqId || "").slice(-6).toUpperCase()}`;
+  const num = r.reqNum ? String(r.reqNum).padStart(3, "0") : (r.reqId || "").slice(-6).toUpperCase();
+  return `${prefix}-${num}`;
 }
 
 export default function AdminDashboard() {
@@ -106,7 +107,7 @@ export default function AdminDashboard() {
             </thead>
             <tbody>
               {recent.map((r: any) => (
-                <tr key={r.reqId} className="clickable" onClick={() => window.location.href = `/admin/returns/${r.reqId}`}>
+                <tr key={r.reqId} className="clickable" onClick={() => window.location.href = `/admin/return/${r.reqId}`}>
                   <td style={{ fontWeight: 600 }}>{getReturnId(r)}</td>
                   <td>#{r.orderNumber || r.orderId}</td>
                   <td>{r.customerName || "—"}</td>

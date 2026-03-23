@@ -67,7 +67,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 function getReturnId(r: any) {
   const prefix = r.requestType === "exchange" ? "EXC" : r.requestType === "mixed" ? "MIX" : "RET";
-  return `${prefix}-${(r.reqId || "").slice(-6).toUpperCase()}`;
+  const num = r.reqNum ? String(r.reqNum).padStart(3, "0") : (r.reqId || "").slice(-6).toUpperCase();
+  return `${prefix}-${num}`;
 }
 
 function statusLabel(s: string) {
@@ -201,12 +202,12 @@ export default function AdminReturns() {
                     <tr
                       key={r.reqId}
                       className={`clickable ${selected.has(r.reqId) ? "selected" : ""}`}
-                      onClick={() => { window.location.href = `/admin/returns/${r.reqId}`; }}
+                      onClick={() => { window.location.href = `/admin/return/${r.reqId}`; }}
                     >
                       <td onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" checked={selected.has(r.reqId)} onChange={() => toggleSelect(r.reqId)} />
                       </td>
-                      <td><a href={`/admin/returns/${r.reqId}`} style={{ fontWeight: 600, color: "var(--admin-accent)", textDecoration: "none" }}>{getReturnId(r)}</a></td>
+                      <td><a href={`/admin/return/${r.reqId}`} style={{ fontWeight: 600, color: "var(--admin-accent)", textDecoration: "none" }}>{getReturnId(r)}</a></td>
                       <td>#{r.orderNumber || r.orderId}</td>
                       <td>{r.customerName || "—"}</td>
                       <td><span className={`admin-badge ${r.requestType}`}>{r.requestType}</span></td>

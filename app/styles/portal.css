@@ -9,6 +9,7 @@
   --portal-card: #FFFFFF;
   --portal-text: #1A1A1A;
   --portal-text-muted: #6B6B6B;
+  /* accent colors are set dynamically by portal layout from settings */
   --portal-accent: #C84B31;
   --portal-accent-hover: #B5402A;
   --portal-success: #2D8A4E;
@@ -16,6 +17,12 @@
   --portal-border: #E8E6E1;
   --portal-radius: 12px;
   --portal-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* Dynamic branding override — set by inline style in portal layout */
+.portal-wrapper {
+  --portal-accent: var(--brand-accent, #C84B31);
+  --portal-accent-hover: var(--brand-accent-hover, #B5402A);
 }
 
 * {
@@ -43,6 +50,59 @@ body {
   text-align: center;
   border-bottom: 1px solid var(--portal-border);
   background: var(--portal-card);
+}
+
+/* Banner hero layout — side by side on desktop */
+.portal-hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+}
+
+.portal-hero-banner {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f7f5;
+  padding: 40px;
+}
+
+.portal-banner-img {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  object-position: center;
+}
+
+.portal-hero-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 40px;
+  background: var(--portal-bg);
+}
+
+.portal-hero-content .portal-logo {
+  margin-bottom: 24px;
+}
+
+.portal-main-hero {
+  padding: 0;
+  max-width: 500px;
+}
+
+@media (max-width: 768px) {
+  .portal-hero {
+    grid-template-columns: 1fr;
+  }
+  .portal-hero-banner {
+    max-height: 200px;
+  }
+  .portal-hero-content {
+    padding: 20px;
+  }
 }
 
 .portal-logo {
