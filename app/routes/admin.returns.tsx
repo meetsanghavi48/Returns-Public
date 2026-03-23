@@ -201,12 +201,12 @@ export default function AdminReturns() {
                     <tr
                       key={r.reqId}
                       className={`clickable ${selected.has(r.reqId) ? "selected" : ""}`}
-                      onClick={() => navigate(`/admin/returns/${r.reqId}`)}
+                      onClick={() => { window.location.href = `/admin/returns/${r.reqId}`; }}
                     >
                       <td onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" checked={selected.has(r.reqId)} onChange={() => toggleSelect(r.reqId)} />
                       </td>
-                      <td style={{ fontWeight: 600 }}>{getReturnId(r)}</td>
+                      <td><a href={`/admin/returns/${r.reqId}`} style={{ fontWeight: 600, color: "var(--admin-accent)", textDecoration: "none" }}>{getReturnId(r)}</a></td>
                       <td>#{r.orderNumber || r.orderId}</td>
                       <td>{r.customerName || "—"}</td>
                       <td><span className={`admin-badge ${r.requestType}`}>{r.requestType}</span></td>
