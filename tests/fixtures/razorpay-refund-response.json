@@ -1,0 +1,17 @@
+{
+  "id": "rfnd_FP8QHiV938haTz",
+  "entity": "refund",
+  "amount": 99900,
+  "receipt": null,
+  "currency": "INR",
+  "payment_id": "pay_FP8QHi23456789",
+  "notes": {},
+  "acquirer_data": {
+    "arn": null
+  },
+  "created_at": 1711512000,
+  "batch_id": null,
+  "status": "processed",
+  "speed_processed": "normal",
+  "speed_requested": "normal"
+}

@@ -1,0 +1,34 @@
+{
+  "ShipmentData": [
+    {
+      "Shipment": {
+        "Status": {
+          "Status": "In Transit",
+          "StatusCode": "X-PPOM",
+          "StatusLocation": "Bengaluru_Koramangala_D (Karnataka)",
+          "StatusDateTime": "2026-03-22T14:30:00"
+        },
+        "Scans": [
+          {
+            "ScanDetail": {
+              "ScanDateTime": "2026-03-22T14:30:00",
+              "ScanType": "UD",
+              "Scan": "In Transit",
+              "StatusDateTime": "2026-03-22T14:30:00",
+              "ScannedLocation": "Bengaluru_Koramangala_D (Karnataka)"
+            }
+          },
+          {
+            "ScanDetail": {
+              "ScanDateTime": "2026-03-21T10:00:00",
+              "ScanType": "UD",
+              "Scan": "Picked Up",
+              "StatusDateTime": "2026-03-21T10:00:00",
+              "ScannedLocation": "Bengaluru_HSR_P (Karnataka)"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

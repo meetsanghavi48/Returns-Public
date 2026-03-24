@@ -1,0 +1,22 @@
+{
+  "cash_pickups_count": 0,
+  "package_count": 1,
+  "upload_wbn": "UPL1234567890",
+  "replacement_count": 0,
+  "pickups_count": 0,
+  "packages_update_count": 0,
+  "cod_count": 0,
+  "success": true,
+  "rmk": "",
+  "cod_amount": 0,
+  "packages": [
+    {
+      "status": "Success",
+      "client": "BLAKC",
+      "sort_code": null,
+      "remarks": [""],
+      "waybill": "1234567890123",
+      "refnum": "RET-001"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "order": {
+    "id": 5678901234,
+    "name": "#1001",
+    "email": "customer@example.com",
+    "created_at": "2026-03-20T10:00:00+05:30",
+    "financial_status": "paid",
+    "fulfillment_status": "fulfilled",
+    "total_price": "2499.00",
+    "currency": "INR",
+    "customer": {
+      "id": 1234567890,
+      "first_name": "Rahul",
+      "last_name": "Sharma",
+      "email": "customer@example.com",
+      "phone": "+919876543210"
+    },
+    "line_items": [
+      {
+        "id": 111,
+        "title": "Classic Black T-Shirt",
+        "variant_title": "Medium",
+        "sku": "BLK-TSH-M",
+        "quantity": 1,
+        "price": "999.00",
+        "product_id": 1001,
+        "variant_id": 2001
+      },
+      {
+        "id": 222,
+        "title": "Slim Fit Jeans",
+        "variant_title": "32",
+        "sku": "JNS-SLM-32",
+        "quantity": 1,
+        "price": "1500.00",
+        "product_id": 1002,
+        "variant_id": 2002
+      }
+    ],
+    "shipping_address": {
+      "first_name": "Rahul",
+      "last_name": "Sharma",
+      "address1": "42 MG Road",
+      "address2": "Apt 5B",
+      "city": "Bengaluru",
+      "province": "Karnataka",
+      "zip": "560001",
+      "country": "India",
+      "phone": "+919876543210"
+    },
+    "tags": "returns-eligible",
+    "note": null
+  }
+}
