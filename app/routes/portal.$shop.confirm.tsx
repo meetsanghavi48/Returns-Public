@@ -1,9 +1,31 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { useLoaderData, Form, useActionData, useNavigation, useNavigate } from "@remix-run/react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import prisma from "../db.server";
 import { submitReturnRequest } from "../services/returns.server";
+
+// Fee calculation — pure function, no server imports
+function calculateFees(
+  items: Array<{ price: string | number; qty: number; action: string }>,
+  fees: { restockingFee: number; returnShippingFee: number; exchangeShippingFee: number; taxRate: number },
+) {
+  const returnItems = items.filter((i) => i.action === "return");
+  const exchangeItems = items.filter((i) => i.action === "exchange");
+  const returnTotal = returnItems.reduce(
+    (s, i) => s + parseFloat(String(i.price || 0)) * (i.qty || 1), 0,
+  );
+  const exchangeTotal = exchangeItems.reduce(
+    (s, i) => s + parseFloat(String(i.price || 0)) * (i.qty || 1), 0,
+  );
+  const itemTotal = returnTotal + exchangeTotal;
+  const restockingFee = fees.restockingFee > 0
+    ? Math.round(returnTotal * (fees.restockingFee / 100) * 100) / 100 : 0;
+  const shippingFee = (returnItems.length > 0 ? fees.returnShippingFee : 0)
+    + (exchangeItems.length > 0 ? fees.exchangeShippingFee : 0);
+  const refundAmount = Math.max(0, returnTotal - restockingFee - shippingFee);
+  return { itemTotal, restockingFee, shippingFee, refundAmount };
+}
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -50,6 +72,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       daysSinceOrder: orderData.days_since || 0,
       orderTags: orderData.tags || "",
       orderLineItems: orderData.line_items || [],
+      multipleReturnsMode: orderData.multiple_returns_mode || "new",
+      existingRequestId: orderData.existing_request_id,
     });
 
     return redirect(`/portal/${shopDomain}/tracking/${reqId}`);
@@ -77,6 +101,21 @@ export default function PortalConfirm() {
   const hasReturn = selectedItems.some((i: any) => i.action === "return");
   const hasExchange = selectedItems.some((i: any) => i.action === "exchange");
   const isExchangeOnly = hasExchange && !hasReturn;
+
+  // Currency symbol from store
+  const currencyCode = data.currency || "INR";
+  const currencySymbol: Record<string, string> = {
+    INR: "₹", USD: "$", EUR: "€", GBP: "£", AUD: "A$", CAD: "C$", JPY: "¥", SGD: "S$", AED: "AED ",
+  };
+  const cs = currencySymbol[currencyCode] || currencyCode + " ";
+
+  // Calculate fees from policy settings
+  const fees = data.fees || { restockingFee: 0, returnShippingFee: 0, exchangeShippingFee: 0, taxRate: 0 };
+  const feeBreakdown = useMemo(
+    () => calculateFees(selectedItems, fees),
+    [selectedItems, fees],
+  );
+  const hasFees = feeBreakdown.restockingFee > 0 || feeBreakdown.shippingFee > 0;
 
   return (
     <>
@@ -130,13 +169,40 @@ export default function PortalConfirm() {
                 <div className="portal-item-meta">Reason: {item.reason}</div>
               )}
             </div>
-            <div className="portal-item-price">₹{item.price}</div>
+            <div className="portal-item-price">{cs}{item.price}</div>
           </div>
         ))}
 
-        <div style={{ textAlign: "right", fontWeight: 700, margin: "12px 0", fontSize: 16 }}>
-          Total: ₹{totalAmount.toLocaleString("en-IN")}
-        </div>
+        {/* Fee breakdown */}
+        {hasReturn && (
+          <div style={{ marginTop: 12, borderTop: "1px solid var(--portal-border)", paddingTop: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 4 }}>
+              <span>Item total</span>
+              <span>{cs}{feeBreakdown.itemTotal.toLocaleString("en-IN")}</span>
+            </div>
+            {feeBreakdown.restockingFee > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 4, color: "var(--portal-accent)" }}>
+                <span>Restocking fee ({fees.restockingFee}%)</span>
+                <span>- {cs}{feeBreakdown.restockingFee.toLocaleString("en-IN")}</span>
+              </div>
+            )}
+            {feeBreakdown.shippingFee > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 4, color: "var(--portal-accent)" }}>
+                <span>Shipping fee</span>
+                <span>- {cs}{feeBreakdown.shippingFee.toLocaleString("en-IN")}</span>
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 700, marginTop: 8, borderTop: "1px solid var(--portal-border)", paddingTop: 8 }}>
+              <span>Refund amount</span>
+              <span>{cs}{feeBreakdown.refundAmount.toLocaleString("en-IN")}</span>
+            </div>
+          </div>
+        )}
+        {!hasReturn && (
+          <div style={{ textAlign: "right", fontWeight: 700, margin: "12px 0", fontSize: 16 }}>
+            Total: {cs}{totalAmount.toLocaleString("en-IN")}
+          </div>
+        )}
       </div>
 
       {/* Refund Method - only show when there are return items */}

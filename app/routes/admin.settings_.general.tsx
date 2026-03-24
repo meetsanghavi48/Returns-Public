@@ -176,6 +176,30 @@ export default function GeneralSettings() {
     setTimeout(() => setSnippetCopied(false), 2000);
   };
 
+  const [emailCopied, setEmailCopied] = useState(false);
+  const emailSnippet = `<!-- Returns Manager - Return/Exchange Link -->
+<table class="row">
+  <tr>
+    <td class="shop-name__cell" style="padding:20px 0;">
+      <center>
+        <a href="${appUrl}/portal/${shop}?order={{ order.name | remove: '#' }}"
+           style="display:inline-block;padding:12px 28px;background:#000;color:#fff;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;font-family:Arial,sans-serif;">
+          Request Return / Exchange
+        </a>
+        <p style="font-size:12px;color:#999;margin-top:8px;">
+          Not happy with your order? Start a return or exchange.
+        </p>
+      </center>
+    </td>
+  </tr>
+</table>`;
+
+  const copyEmail = () => {
+    navigator.clipboard.writeText(emailSnippet);
+    setEmailCopied(true);
+    setTimeout(() => setEmailCopied(false), 2000);
+  };
+
   return (
     <>
       <div className="admin-page-header">
@@ -280,6 +304,29 @@ export default function GeneralSettings() {
           <div className="admin-card">
             <label className="admin-label">Connected store URL</label>
             <input className="admin-input" value={shop} disabled style={{ background: "#f9fafb", marginTop: 4 }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Email Notification */}
+      <div className="settings-section-row">
+        <div className="settings-section-left">
+          <h3 className="settings-section-title">Order Confirmation Email</h3>
+          <p className="settings-section-desc">
+            Add a "Return / Exchange" button to your Shopify order confirmation emails. Go to Shopify Admin → Settings → Notifications → Order confirmation → paste this code.
+          </p>
+        </div>
+        <div className="settings-section-right">
+          <div className="admin-card">
+            <div style={{ background: "#1a1a2e", color: "#a0a0b8", padding: 12, borderRadius: 6, fontSize: 12, fontFamily: "monospace", maxHeight: 150, overflow: "auto", marginBottom: 8 }}>
+              <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{emailSnippet}</pre>
+            </div>
+            <button className="admin-btn admin-btn-sm" onClick={copyEmail}>
+              {emailCopied ? "Copied!" : "Copy Email Snippet"}
+            </button>
+            <p className="admin-help" style={{ marginTop: 8 }}>
+              Paste this at the bottom of your order confirmation email template in Shopify → Settings → Notifications.
+            </p>
           </div>
         </div>
       </div>

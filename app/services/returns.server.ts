@@ -99,10 +99,10 @@ export async function submitReturnRequest(
     daysSinceOrder?: number;
     orderTags?: string;
     orderLineItems?: any[];
+    multipleReturnsMode?: "new" | "append";
+    existingRequestId?: string;
   },
 ) {
-  const reqId = uid();
-
   // Determine request type
   const hasReturn = data.items.some((i) => i.action === "return");
   const hasExchange = data.items.some((i) => i.action === "exchange");
@@ -126,6 +126,49 @@ export async function submitReturnRequest(
     0,
   );
 
+  // --- APPEND MODE: add items to existing pending/approved request ---
+  if (data.multipleReturnsMode === "append" && data.existingRequestId) {
+    const existing = await prisma.returnRequest.findUnique({
+      where: { reqId: data.existingRequestId },
+    });
+    if (existing && (existing.status === "pending" || existing.status === "approved")) {
+      const existingItems = (existing.items as any[]) || [];
+      const mergedItems = [...existingItems, ...items];
+      const mergedTotal = mergedItems.reduce(
+        (s, i) => s + parseFloat(i.price || 0) * (parseInt(i.qty) || 1), 0,
+      );
+
+      // Recalculate type
+      const mergedHasReturn = mergedItems.some((i) => i.action === "return");
+      const mergedHasExchange = mergedItems.some((i) => i.action === "exchange");
+      const mergedType = mergedHasReturn && mergedHasExchange ? "mixed"
+        : mergedHasExchange ? "exchange" : "return";
+
+      await prisma.returnRequest.update({
+        where: { reqId: data.existingRequestId },
+        data: {
+          items: mergedItems as any,
+          totalPrice: mergedTotal,
+          requestType: mergedType,
+        },
+      });
+
+      await auditLog(
+        shop,
+        data.orderId,
+        data.existingRequestId,
+        "items_appended",
+        "customer",
+        `Added ${items.length} items | New total: ₹${mergedTotal}`,
+      );
+
+      return data.existingRequestId;
+    }
+  }
+
+  // --- NEW REQUEST MODE ---
+  const reqId = uid();
+
   // Get sequential request number (separate per type)
   const counter = await prisma.returnCounter.upsert({
     where: { shop_type: { shop, type: requestType } },
@@ -134,7 +177,6 @@ export async function submitReturnRequest(
   });
   const reqNum = counter.lastNumber;
 
-  // Always create a new request (multiple returns per order allowed)
   const tag =
     requestType === "exchange"
       ? "exchange-requested"
@@ -254,6 +296,53 @@ export async function submitManualRequest(
   return reqId;
 }
 
+// Apply post-action policies based on settings
+async function applyPostActionPolicies(
+  shop: string,
+  accessToken: string,
+  reqId: string,
+  action: "refunded" | "exchanged" | "rejected",
+) {
+  try {
+    const request = await prisma.returnRequest.findUnique({ where: { reqId } });
+    if (!request) return;
+
+    // Auto-archive after refund
+    if (action === "refunded") {
+      const autoArchive = await getSetting<boolean>(shop, "auto_archive_on_refund", false);
+      if (autoArchive) {
+        await prisma.returnRequest.update({
+          where: { reqId },
+          data: { status: "archived", archivedAt: new Date() },
+        });
+        await auditLog(shop, request.orderId, reqId, "auto_archived", "system", "Auto-archived after refund");
+      }
+    }
+
+    // Auto-archive after exchange
+    if (action === "exchanged") {
+      const autoArchive = await getSetting<boolean>(shop, "auto_archive_on_exchange", false);
+      if (autoArchive) {
+        await prisma.returnRequest.update({
+          where: { reqId },
+          data: { status: "archived", archivedAt: new Date() },
+        });
+        await auditLog(shop, request.orderId, reqId, "auto_archived", "system", "Auto-archived after exchange");
+      }
+    }
+
+    // Auto-refund additional payment for rejected requests
+    if (action === "rejected") {
+      const autoRefund = await getSetting<boolean>(shop, "auto_refund_rejected", false);
+      if (autoRefund) {
+        await auditLog(shop, request.orderId, reqId, "auto_refund_rejected", "system", "Flagged for auto-refund on rejection");
+      }
+    }
+  } catch (e: any) {
+    console.error("[postActionPolicies]", e.message);
+  }
+}
+
 // Approve a pending request
 export async function approveRequest(
   shop: string,
@@ -320,6 +409,8 @@ export async function rejectRequest(
     "admin",
     reason || "Manual rejection",
   );
+
+  await applyPostActionPolicies(shop, accessToken, reqId, "rejected");
 }
 
 // Archive a completed request

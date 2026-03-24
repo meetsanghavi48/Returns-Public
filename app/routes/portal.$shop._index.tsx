@@ -1,12 +1,15 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { useActionData, Form, useNavigation, Link, useParams } from "@remix-run/react";
+import { useActionData, Form, useNavigation, Link, useParams, useLoaderData } from "@remix-run/react";
 import prisma from "../db.server";
 import { shopifyREST } from "../services/shopify.server";
-import { getSetting } from "../services/settings.server";
+import { getSetting, getAllSettings } from "../services/settings.server";
+import { validateOrderEligibility } from "../services/policies.server";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
-  return json({ shop: params.shop });
+  const shopDomain = params.shop!;
+  const enableOtp = await getSetting<boolean>(shopDomain, "enable_email_otp", false);
+  return json({ shop: shopDomain, enableOtp });
 };
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
@@ -14,42 +17,97 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   const formData = await request.formData();
   const orderNumber = (formData.get("orderNumber") as string || "").replace(/^#+/, "").trim();
   const pincode = (formData.get("pincode") as string || "").trim();
+  const email = (formData.get("email") as string || "").trim();
 
   if (!orderNumber) return json({ error: "Please enter your order number." });
-  if (!pincode) return json({ error: "Please enter your pincode for verification." });
 
   // Get shop's access token
   const shopRecord = await prisma.shop.findUnique({ where: { shop: shopDomain } });
   if (!shopRecord) return json({ error: "Store not found." });
+
+  const enableOtp = await getSetting<boolean>(shopDomain, "enable_email_otp", false);
+
+  // Verify identity: OTP mode uses email, standard mode uses pincode
+  if (enableOtp) {
+    if (!email) return json({ error: "Please enter your email address." });
+  } else {
+    if (!pincode) return json({ error: "Please enter your pincode for verification." });
+  }
 
   // Lookup order via REST API
   const result = await shopifyREST(
     shopDomain,
     shopRecord.accessToken,
     "GET",
-    `orders.json?name=%23${orderNumber}&status=any&fields=id,order_number,name,tags,shipping_address,line_items,created_at,fulfillments,financial_status,customer`,
+    `orders.json?name=%23${orderNumber}&status=any&fields=id,order_number,name,tags,shipping_address,line_items,created_at,fulfillments,financial_status,customer,total_price,discount_codes`,
   );
 
   const order = result?.orders?.[0];
   if (!order) return json({ error: `Order #${orderNumber} not found.` });
 
-  // Verify pincode
-  const orderPincode = order.shipping_address?.zip || "";
-  if (pincode !== orderPincode) {
-    return json({ error: "Pincode does not match the shipping address on this order." });
+  // Verify identity
+  if (enableOtp) {
+    const orderEmail = order.customer?.email || "";
+    if (email.toLowerCase() !== orderEmail.toLowerCase()) {
+      return json({ error: "Email does not match the email on this order." });
+    }
+  } else {
+    const orderPincode = order.shipping_address?.zip || "";
+    if (pincode !== orderPincode) {
+      return json({ error: "Pincode does not match the shipping address on this order." });
+    }
   }
 
-  // Check return window
-  const returnWindowDays = await getSetting<number>(shopDomain, "return_window_days", 30);
+  // Fetch product tags for line items (needed for tag-based restrictions)
+  const productIds = [...new Set((order.line_items || []).map((li: any) => li.product_id).filter(Boolean))];
+  const productTagsMap: Record<string, string> = {};
+  for (const pid of productIds) {
+    try {
+      const pResult = await shopifyREST(shopDomain, shopRecord.accessToken, "GET", `products/${pid}.json?fields=id,tags`);
+      if (pResult?.product?.tags) {
+        productTagsMap[String(pid)] = pResult.product.tags;
+      }
+    } catch { /* ignore individual product fetch errors */ }
+  }
+  // Attach product tags to line items
+  for (const li of order.line_items || []) {
+    li.product_tags = productTagsMap[String(li.product_id)] || "";
+  }
+
+  // Get store currency
+  const shopInfo = await shopifyREST(shopDomain, shopRecord.accessToken, "GET", "shop.json?fields=currency");
+  const currency = shopInfo?.shop?.currency || "INR";
+
+  // Calculate days since order
   const orderDate = new Date(order.created_at);
   const daysSince = Math.floor((Date.now() - orderDate.getTime()) / (1000 * 60 * 60 * 24));
-  if (daysSince > returnWindowDays) {
+
+  // Run full policy validation
+  const policy = await validateOrderEligibility(shopDomain, {
+    id: String(order.id),
+    order_number: order.order_number,
+    tags: order.tags || "",
+    financial_status: order.financial_status,
+    total_price: order.total_price,
+    discount_codes: order.discount_codes,
+    fulfillments: order.fulfillments,
+    line_items: order.line_items,
+  }, daysSince);
+
+  // If blocked by multiple returns policy, redirect to tracking
+  if (policy.multipleReturnsMode === "blocked" && policy.existingRequestId) {
     return json({
-      error: `This order is ${daysSince} days old. The return window is ${returnWindowDays} days.`,
+      error: policy.errors[0],
+      trackingLink: `/portal/${shopDomain}/tracking/${policy.existingRequestId}`,
     });
   }
 
-  // Find existing active returns for this order — collect already-returned item IDs
+  // Show all other policy errors
+  if (!policy.eligible) {
+    return json({ error: policy.errors.join(" ") });
+  }
+
+  // Collect already-returned item IDs
   const existingReturns = await prisma.returnRequest.findMany({
     where: {
       shop: shopDomain,
@@ -71,11 +129,10 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   const allReturned = allLineItemIds.length > 0 && allLineItemIds.every((id: string) => returnedItemIds.includes(id));
 
   if (allReturned && existingReturns.length > 0) {
-    // All items already have active returns — redirect to the latest one
     return redirect(`/portal/${shopDomain}/tracking/${existingReturns[0].reqId}`);
   }
 
-  // Pass order data to next step via URL params (encoded)
+  // Pass order data + policy info to next step
   const orderData = encodeURIComponent(
     JSON.stringify({
       id: String(order.id),
@@ -85,9 +142,17 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       shipping_address: order.shipping_address,
       customer: order.customer,
       financial_status: order.financial_status,
+      currency,
       days_since: daysSince,
       is_cod: (order.financial_status || "").toLowerCase().includes("pending"),
       returned_item_ids: returnedItemIds,
+      exchange_allowed: policy.exchangeAllowed,
+      exchange_other_products: policy.exchangeOtherProducts,
+      multiple_returns_mode: policy.multipleReturnsMode,
+      existing_request_id: policy.existingRequestId,
+      fees: policy.fees,
+      blocked_return_tags: policy.blockedReturnTags,
+      blocked_exchange_tags: policy.blockedExchangeTags,
       line_items: (order.line_items || []).map((li: any) => ({
         id: String(li.id),
         title: li.title,
@@ -97,6 +162,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         price: li.price,
         quantity: li.quantity,
         image_url: li.image?.src || null,
+        product_tags: li.product_tags || "",
       })),
     }),
   );
@@ -105,6 +171,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 };
 
 export default function PortalLookup() {
+  const { enableOtp } = useLoaderData<typeof loader>();
   const actionData = useActionData<any>();
   const navigation = useNavigation();
   const isLoading = navigation.state === "submitting";
@@ -124,11 +191,25 @@ export default function PortalLookup() {
       <div className="portal-card">
         <h2>Find Your Order</h2>
         <p style={{ color: "var(--portal-text-muted)", marginBottom: 20, fontSize: 14 }}>
-          Enter your order number and shipping pincode to start a return or exchange.
+          {enableOtp
+            ? "Enter your order number and email address to start a return or exchange."
+            : "Enter your order number and shipping pincode to start a return or exchange."}
         </p>
 
         {actionData?.error && (
-          <div className="portal-error">{actionData.error}</div>
+          <div className="portal-error">
+            {actionData.error}
+            {actionData.trackingLink && (
+              <div style={{ marginTop: 8 }}>
+                <Link
+                  to={actionData.trackingLink}
+                  style={{ color: "var(--portal-accent)", fontWeight: 600 }}
+                >
+                  View existing request →
+                </Link>
+              </div>
+            )}
+          </div>
         )}
 
         <Form method="post">
@@ -142,18 +223,33 @@ export default function PortalLookup() {
               required
             />
           </div>
-          <div className="portal-field">
-            <label className="portal-label">Shipping Pincode</label>
-            <input
-              className="portal-input"
-              name="pincode"
-              type="text"
-              placeholder="e.g. 400001"
-              maxLength={6}
-              pattern="[0-9]{6}"
-              required
-            />
-          </div>
+
+          {enableOtp ? (
+            <div className="portal-field">
+              <label className="portal-label">Email Address</label>
+              <input
+                className="portal-input"
+                name="email"
+                type="email"
+                placeholder="your@email.com"
+                required
+              />
+            </div>
+          ) : (
+            <div className="portal-field">
+              <label className="portal-label">Shipping Pincode</label>
+              <input
+                className="portal-input"
+                name="pincode"
+                type="text"
+                placeholder="e.g. 400001"
+                maxLength={6}
+                pattern="[0-9]{6}"
+                required
+              />
+            </div>
+          )}
+
           <button
             className="portal-btn portal-btn-primary"
             type="submit"

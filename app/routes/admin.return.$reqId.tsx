@@ -45,7 +45,10 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const returnShippingFee = await getSetting(shop, "return_shipping_fee", 100);
   const restockingFeePct = await getSetting(shop, "restocking_fee_pct", 0);
 
-  return json({ returnReq, auditLogs, orderRequests, orderDetails, returnShippingFee, restockingFeePct });
+  // Get store currency
+  const currency = orderDetails?.currency || "USD";
+
+  return json({ returnReq, auditLogs, orderRequests, orderDetails, returnShippingFee, restockingFeePct, currency });
 };
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
@@ -70,11 +73,19 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         await createDelhiveryPickup(shop, accessToken, req);
         return json({ ok: true, message: "Pickup created" });
       }
+      case "mark_delivered": {
+        await prisma.returnRequest.update({
+          where: { reqId, shop },
+          data: { status: "delivered" },
+        });
+        await auditLog(shop, null, reqId, "mark_delivered", "admin", "Marked as received/delivered");
+        return json({ ok: true, message: "Marked as received" });
+      }
       case "process_refund": {
         const req = await prisma.returnRequest.findFirst({ where: { shop, reqId } });
         if (!req) return json({ error: "Not found" }, { status: 404 });
         const result = await processRefund(shop, accessToken, req);
-        return json({ ok: true, message: result ? `Refund: ₹${result.amount}` : "Refund failed" });
+        return json({ ok: true, message: result ? `Refund processed` : "Refund failed" });
       }
       case "create_exchange": {
         const req = await prisma.returnRequest.findFirst({ where: { shop, reqId } });
@@ -149,7 +160,9 @@ function timeAgo(date: string) {
 }
 
 export default function AdminReturnDetail() {
-  const { returnReq, auditLogs, orderRequests, orderDetails, returnShippingFee, restockingFeePct } = useLoaderData<typeof loader>();
+  const { returnReq, auditLogs, orderRequests, orderDetails, returnShippingFee, restockingFeePct, currency } = useLoaderData<typeof loader>();
+  const currencySymbols: Record<string, string> = { INR: "₹", USD: "$", EUR: "€", GBP: "£", AUD: "A$", CAD: "C$", JPY: "¥", SGD: "S$", AED: "AED " };
+  const cs = currencySymbols[currency] || currency + " ";
   const actionData = useActionData<any>();
   const submit = useSubmit();
   const navigation = useNavigation();
@@ -224,12 +237,12 @@ export default function AdminReturnDetail() {
               </button>
             </>
           )}
-          {isApproved && !isRefunded && (
-            <button className="admin-btn admin-btn-primary" onClick={() => doAction("process_refund")} disabled={isLoading}>
+          {isApproved && !isRefunded && isExchange && (
+            <button className="admin-btn admin-btn-primary" onClick={() => doAction("mark_delivered")} disabled={isLoading}>
               Mark as Received
             </button>
           )}
-          {!isPending && !isRefunded && !isRejected && !isArchived && !isExFulfilled && isReturn && (
+          {isApproved && !isRefunded && isReturn && (
             <button className="admin-btn admin-btn-success" onClick={() => doAction("process_refund")} disabled={isLoading}>
               Mark Received & Refund
             </button>
@@ -324,7 +337,7 @@ export default function AdminReturnDetail() {
                       <div>
                         <div className="dp-exchange-name">{item.title}</div>
                         <div className="dp-exchange-variant">{item.variant_title || "Default"}</div>
-                        <div className="dp-exchange-price">₹{parseFloat(item.price).toLocaleString("en-IN")} × {item.qty || 1}</div>
+                        <div className="dp-exchange-price">{cs}{parseFloat(item.price).toLocaleString("en-IN")} × {item.qty || 1}</div>
                         {item.reason && <span className="dp-reason-badge">{item.reason}</span>}
                       </div>
                     </div>
@@ -366,8 +379,8 @@ export default function AdminReturnDetail() {
                     {item.reason && <span className="dp-reason-badge">{item.reason}</span>}
                   </div>
                   <div className="admin-item-price">
-                    ₹{parseFloat(item.price).toLocaleString("en-IN")} × {item.qty || 1}
-                    <div style={{ fontWeight: 700, marginTop: 2 }}>₹{(parseFloat(item.price) * (parseInt(item.qty) || 1)).toLocaleString("en-IN")}</div>
+                    {cs}{parseFloat(item.price).toLocaleString("en-IN")} × {item.qty || 1}
+                    <div style={{ fontWeight: 700, marginTop: 2 }}>{cs}{(parseFloat(item.price) * (parseInt(item.qty) || 1)).toLocaleString("en-IN")}</div>
                   </div>
                 </div>
               ))}
@@ -383,32 +396,32 @@ export default function AdminReturnDetail() {
                 <tbody>
                   <tr>
                     <td>Item price</td>
-                    <td className="dp-refund-calc">₹{origTotal.toFixed(2)} × 1</td>
-                    <td className="dp-refund-amount">₹{origTotal.toFixed(2)}</td>
+                    <td className="dp-refund-calc">{cs}{origTotal.toFixed(2)} × 1</td>
+                    <td className="dp-refund-amount">{cs}{origTotal.toFixed(2)}</td>
                   </tr>
                   {discTotal > 0 && (
                     <tr>
                       <td>Discount</td>
                       <td></td>
-                      <td className="dp-refund-amount" style={{ color: "var(--admin-danger)" }}>- ₹{discTotal.toFixed(2)}</td>
+                      <td className="dp-refund-amount" style={{ color: "var(--admin-danger)" }}>- {cs}{discTotal.toFixed(2)}</td>
                     </tr>
                   )}
                   <tr>
                     <td>Return Fee {!isRefunded && <span className="dp-fee-pill">Pending</span>}</td>
                     <td></td>
-                    <td className="dp-refund-amount">- ₹{retFee.toFixed(2)}</td>
+                    <td className="dp-refund-amount">- {cs}{retFee.toFixed(2)}</td>
                   </tr>
                   {restockFee > 0 && (
                     <tr>
                       <td>Restocking Fee ({restockingFeePct}%)</td>
                       <td></td>
-                      <td className="dp-refund-amount">- ₹{restockFee.toFixed(2)}</td>
+                      <td className="dp-refund-amount">- {cs}{restockFee.toFixed(2)}</td>
                     </tr>
                   )}
                   <tr className="dp-refund-total">
                     <td><strong>Total (To be refunded)</strong></td>
                     <td></td>
-                    <td className="dp-refund-amount"><strong>₹{totalRefund.toFixed(2)}</strong></td>
+                    <td className="dp-refund-amount"><strong>{cs}{totalRefund.toFixed(2)}</strong></td>
                   </tr>
                 </tbody>
               </table>
@@ -417,7 +430,7 @@ export default function AdminReturnDetail() {
                   <hr className="admin-divider" />
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontWeight: 600 }}>Refunded</span>
-                    <span style={{ fontWeight: 700, color: "var(--admin-success)" }}>₹{Number(r.refundAmount).toLocaleString("en-IN")}</span>
+                    <span style={{ fontWeight: 700, color: "var(--admin-success)" }}>{cs}{Number(r.refundAmount).toLocaleString("en-IN")}</span>
                   </div>
                   {r.utrNumber ? (
                     <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
@@ -446,7 +459,7 @@ export default function AdminReturnDetail() {
                     <span className="dp-action-icon">💰</span>
                     <div className="dp-action-info">
                       <div className="dp-action-name">Process Refund</div>
-                      <div className="dp-action-desc">Refund ₹{totalRefund.toFixed(2)} to {r.refundMethod === "store_credit" ? "store credit" : "original payment"}</div>
+                      <div className="dp-action-desc">Refund {cs}{totalRefund.toFixed(2)} to {r.refundMethod === "store_credit" ? "store credit" : "original payment"}</div>
                     </div>
                     <button className="admin-btn admin-btn-sm admin-btn-success" onClick={() => doAction("process_refund")} disabled={isLoading}>
                       Create Refund
@@ -458,7 +471,7 @@ export default function AdminReturnDetail() {
                     <span className="dp-action-icon">🎁</span>
                     <div className="dp-action-info">
                       <div className="dp-action-name">Issue Store Credit</div>
-                      <div className="dp-action-desc">Create a gift card for ₹{netTotal.toFixed(2)}</div>
+                      <div className="dp-action-desc">Create a gift card for {cs}{netTotal.toFixed(2)}</div>
                     </div>
                     <button className="admin-btn admin-btn-sm" onClick={() => doAction("process_refund")} disabled={isLoading}>
                       Issue Credit
@@ -589,7 +602,7 @@ export default function AdminReturnDetail() {
             <table className="dp-info-table">
               <tbody>
                 <tr><td>Order #</td><td>{r.orderNumber}</td></tr>
-                <tr><td>Order Total</td><td>₹{parseFloat(orderTotal).toLocaleString("en-IN")}</td></tr>
+                <tr><td>Order Total</td><td>{cs}{parseFloat(orderTotal).toLocaleString("en-IN")}</td></tr>
                 <tr><td>Payment</td><td><span className={`admin-badge ${financialStatus === "paid" ? "delivered" : "pending"}`}>{financialStatus}</span></td></tr>
                 <tr><td>Type</td><td>{r.isCod ? <span className="admin-badge pending">COD</span> : "Prepaid"}</td></tr>
               </tbody>

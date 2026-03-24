@@ -2,6 +2,7 @@ import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { useLoaderData, useNavigate } from "@remix-run/react";
 import { useState, useCallback } from "react";
+import prisma from "../db.server";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -10,17 +11,50 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
   try {
     const order = JSON.parse(decodeURIComponent(orderParam));
-    return json({ order, shop: params.shop });
+    const shop = params.shop!;
+    // Load configured reasons from DB
+    const dbReasons = await prisma.returnReason.findMany({
+      where: { shop },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    });
+    // Fallback to defaults if no reasons configured
+    const returnReasons = dbReasons.filter(r => r.applicableFor === "return" || r.applicableFor === "both");
+    const exchangeReasons = dbReasons.filter(r => r.applicableFor === "exchange" || r.applicableFor === "both");
+    const defaultReasons = [
+      { name: "Size too small" }, { name: "Size too large" }, { name: "Defective/damaged" },
+      { name: "Wrong item received" }, { name: "Not as described" }, { name: "Changed my mind" }, { name: "Other" },
+    ];
+    return json({
+      order, shop,
+      returnReasons: returnReasons.length > 0 ? returnReasons : defaultReasons,
+      exchangeReasons: exchangeReasons.length > 0 ? exchangeReasons : defaultReasons,
+    });
   } catch {
     throw redirect(`/portal/${params.shop}`);
   }
 };
 
 export default function PortalRequest() {
-  const { order, shop } = useLoaderData<typeof loader>();
+  const { order, shop, returnReasons, exchangeReasons } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
 
   const returnedItemIds: string[] = order.returned_item_ids || [];
+  const exchangeAllowed: boolean = order.exchange_allowed !== false;
+  const exchangeOtherProducts: boolean = order.exchange_other_products !== false;
+  const blockedReturnTags: string[] = order.blocked_return_tags || [];
+  const blockedExchangeTags: string[] = order.blocked_exchange_tags || [];
+
+  // Check if an item has any blocked tags
+  const isItemBlockedForReturn = (item: any) => {
+    if (blockedReturnTags.length === 0) return false;
+    const itemTags = (item.product_tags || "").split(",").map((t: string) => t.trim().toLowerCase());
+    return blockedReturnTags.some((bt) => itemTags.includes(bt));
+  };
+  const isItemBlockedForExchange = (item: any) => {
+    if (blockedExchangeTags.length === 0) return false;
+    const itemTags = (item.product_tags || "").split(",").map((t: string) => t.trim().toLowerCase());
+    return blockedExchangeTags.some((bt) => itemTags.includes(bt));
+  };
 
   const [selectedItems, setSelectedItems] = useState<
     Record<string, { action: string; reason: string; qty: number }>
@@ -58,7 +92,7 @@ export default function PortalRequest() {
 
     const hasExchange = items.some((i: any) => i.action === "exchange");
     const confirmData = encodeURIComponent(
-      JSON.stringify({ ...order, selected_items: items }),
+      JSON.stringify({ ...order, selected_items: items, exchange_other_products: exchangeOtherProducts }),
     );
 
     if (hasExchange) {
@@ -101,22 +135,27 @@ export default function PortalRequest() {
         {order.line_items.map((item: any) => {
           const sel = selectedItems[item.id];
           const alreadyReturned = returnedItemIds.includes(String(item.id));
+          const blockedReturn = isItemBlockedForReturn(item);
+          const blockedExchange = isItemBlockedForExchange(item);
+          const blockedBoth = blockedReturn && blockedExchange;
+          const isDisabled = alreadyReturned || blockedBoth;
+          const cs = order.currency ? ({INR:"₹",USD:"$",EUR:"€",GBP:"£"} as Record<string,string>)[order.currency] || order.currency+" " : "₹";
           return (
             <div key={item.id}>
               <div
                 className="portal-item"
-                onClick={() => !alreadyReturned && toggleItem(item.id)}
+                onClick={() => !isDisabled && toggleItem(item.id)}
                 style={{
-                  cursor: alreadyReturned ? "not-allowed" : "pointer",
-                  opacity: alreadyReturned ? 0.5 : 1,
+                  cursor: isDisabled ? "not-allowed" : "pointer",
+                  opacity: isDisabled ? 0.5 : 1,
                 }}
               >
                 <input
                   type="checkbox"
                   className="portal-item-checkbox"
                   checked={!!sel}
-                  disabled={alreadyReturned}
-                  onChange={() => !alreadyReturned && toggleItem(item.id)}
+                  disabled={isDisabled}
+                  onChange={() => !isDisabled && toggleItem(item.id)}
                 />
                 {item.image_url && (
                   <img
@@ -135,8 +174,23 @@ export default function PortalRequest() {
                       Already in a return request
                     </div>
                   )}
+                  {blockedBoth && !alreadyReturned && (
+                    <div style={{ fontSize: 12, color: "var(--portal-accent)", fontWeight: 600, marginTop: 2 }}>
+                      Not eligible for return or exchange
+                    </div>
+                  )}
+                  {blockedReturn && !blockedExchange && !alreadyReturned && (
+                    <div style={{ fontSize: 12, color: "var(--portal-warning)", fontWeight: 600, marginTop: 2 }}>
+                      Exchange only — not eligible for return
+                    </div>
+                  )}
+                  {!blockedReturn && blockedExchange && !alreadyReturned && (
+                    <div style={{ fontSize: 12, color: "var(--portal-warning)", fontWeight: 600, marginTop: 2 }}>
+                      Return only — not eligible for exchange
+                    </div>
+                  )}
                 </div>
-                <div className="portal-item-price">₹{item.price}</div>
+                <div className="portal-item-price">{cs}{item.price}</div>
               </div>
 
               {sel && (
@@ -144,15 +198,21 @@ export default function PortalRequest() {
                   <div className="portal-toggle-group">
                     <button
                       className={`portal-toggle ${sel.action === "exchange" ? "active" : ""}`}
-                      onClick={() => updateItem(item.id, "action", "exchange")}
+                      onClick={() => (exchangeAllowed && !blockedExchange) && updateItem(item.id, "action", "exchange")}
                       type="button"
+                      disabled={!exchangeAllowed || blockedExchange}
+                      title={!exchangeAllowed ? "Exchange window has expired" : blockedExchange ? "Not eligible for exchange" : ""}
+                      style={(!exchangeAllowed || blockedExchange) ? { opacity: 0.4, cursor: "not-allowed" } : {}}
                     >
                       Exchange
                     </button>
                     <button
                       className={`portal-toggle ${sel.action === "return" ? "active" : ""}`}
-                      onClick={() => updateItem(item.id, "action", "return")}
+                      onClick={() => !blockedReturn && updateItem(item.id, "action", "return")}
                       type="button"
+                      disabled={blockedReturn}
+                      title={blockedReturn ? "Not eligible for return" : ""}
+                      style={blockedReturn ? { opacity: 0.4, cursor: "not-allowed" } : {}}
                     >
                       Return
                     </button>
@@ -167,19 +227,9 @@ export default function PortalRequest() {
                       }
                     >
                       <option value="">Select a reason...</option>
-                      <option value="Size too small">Size too small</option>
-                      <option value="Size too large">Size too large</option>
-                      <option value="Defective/damaged">
-                        Defective/damaged
-                      </option>
-                      <option value="Wrong item received">
-                        Wrong item received
-                      </option>
-                      <option value="Not as described">
-                        Not as described
-                      </option>
-                      <option value="Changed my mind">Changed my mind</option>
-                      <option value="Other">Other</option>
+                      {(sel.action === "exchange" ? exchangeReasons : returnReasons).map((r: any, i: number) => (
+                        <option key={i} value={r.name}>{r.name}</option>
+                      ))}
                     </select>
                   </div>
 
