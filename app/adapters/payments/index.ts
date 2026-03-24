@@ -7,12 +7,12 @@ import { StripeAdapter } from "./stripe";
 import { ShopifyCreditAdapter } from "./shopify_credit";
 import { PayUAdapter } from "./payu";
 import { PaytmAdapter } from "./paytm";
+import { EasebuzzAdapter } from "./easebuzz";
 
 // Tier 2 — Stubs
 import { RazorpayXAdapter } from "./razorpay_x";
 import { AdyenAdapter } from "./adyen";
 import { CashgramAdapter } from "./cashgram";
-import { EasebuzzAdapter } from "./easebuzz";
 import { TransbnkAdapter } from "./transbnk";
 import { ShopfloAdapter } from "./shopflo";
 import { NectorAdapter } from "./nector";
