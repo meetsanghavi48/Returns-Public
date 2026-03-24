@@ -140,10 +140,18 @@ export default function SettingsHub() {
         <Grid>
           <Grid.Cell columnSpan={{ xs: 6, sm: 4, md: 4, lg: 4, xl: 4 }}>
             <SettingsCard
+              title="Payments"
+              description="Manage payment partner integrations for refunds"
+              icon={DiscountIcon}
+              url="/app/settings/payments"
+            />
+          </Grid.Cell>
+          <Grid.Cell columnSpan={{ xs: 6, sm: 4, md: 4, lg: 4, xl: 4 }}>
+            <SettingsCard
               title="Integrations"
-              description="Connect with other apps and systems"
+              description="Connect chat, mobile, marketing & WMS platforms"
               icon={AppsIcon}
-              url="/app/integrations"
+              url="/app/settings/integrations"
             />
           </Grid.Cell>
           <Grid.Cell columnSpan={{ xs: 6, sm: 4, md: 4, lg: 4, xl: 4 }}>
@@ -152,14 +160,6 @@ export default function SettingsHub() {
               description="Create rules to automatically perform actions"
               icon={AutomationIcon}
               url="/app/settings/automation"
-            />
-          </Grid.Cell>
-          <Grid.Cell columnSpan={{ xs: 6, sm: 4, md: 4, lg: 4, xl: 4 }}>
-            <SettingsCard
-              title="Promotions"
-              description="Create promotions to incentivise customers"
-              icon={DiscountIcon}
-              url="/app/settings/promotions"
             />
           </Grid.Cell>
         </Grid>
