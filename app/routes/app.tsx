@@ -22,7 +22,9 @@ export default function App() {
       <NavMenu>
         <Link to="/app" rel="home">Dashboard</Link>
         <Link to="/app/returns">Returns</Link>
+        <Link to="/app/integrations">Integrations</Link>
         <Link to="/app/settings">Settings</Link>
+        <Link to="/app/analytics">Analytics</Link>
         <Link to="/app/audit">Audit Log</Link>
       </NavMenu>
       <Outlet />

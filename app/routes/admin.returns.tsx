@@ -5,6 +5,7 @@ import { useState, useCallback } from "react";
 import { requireAdminAuth } from "../services/admin-session.server";
 import prisma from "../db.server";
 import { approveRequest, rejectRequest } from "../services/returns.server";
+import { shopifyREST } from "../services/shopify.server";
 
 const STATUS_TABS = [
   { id: "all", label: "All" },
@@ -17,7 +18,7 @@ const STATUS_TABS = [
 ];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { shop } = await requireAdminAuth(request);
+  const { shop, accessToken } = await requireAdminAuth(request);
   const url = new URL(request.url);
   const status = url.searchParams.get("status") || "all";
   const search = url.searchParams.get("search") || "";
@@ -47,7 +48,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
   }
 
-  return json({ returns, counts, status, search });
+  // Get store currency
+  let currency = "USD";
+  try {
+    const shopData = await shopifyREST(shop, accessToken, "GET", "shop.json?fields=currency");
+    currency = shopData?.shop?.currency || "USD";
+  } catch {}
+
+  return json({ returns, counts, status, search, currency });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -81,7 +89,9 @@ function statusLabel(s: string) {
 }
 
 export default function AdminReturns() {
-  const { returns, counts, status, search } = useLoaderData<typeof loader>();
+  const { returns, counts, status, search, currency } = useLoaderData<typeof loader>();
+  const currencySymbols: Record<string, string> = { INR: "₹", USD: "$", EUR: "€", GBP: "£", AUD: "A$", CAD: "C$", JPY: "¥" };
+  const cs = currencySymbols[currency] || currency + " ";
   const navigate = useNavigate();
   const submit = useSubmit();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -213,7 +223,7 @@ export default function AdminReturns() {
                       <td><span className={`admin-badge ${r.requestType}`}>{r.requestType}</span></td>
                       <td><span className={`admin-badge ${r.status}`}>{statusLabel(r.status)}</span></td>
                       <td>{items.length} item{items.length !== 1 ? "s" : ""}</td>
-                      <td>₹{Number(r.totalPrice).toLocaleString("en-IN")}</td>
+                      <td>{cs}{Number(r.totalPrice).toLocaleString("en-IN")}</td>
                       <td>{new Date(r.createdAt).toLocaleDateString("en-IN")}</td>
                     </tr>
                   );

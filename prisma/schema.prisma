@@ -148,6 +148,39 @@ model Settings {
   @@index([shop])
 }
 
+// Return/Exchange reasons configured by merchant
+model ReturnReason {
+  id              String   @id @default(uuid())
+  shop            String
+  name            String
+  applicableFor   String   @default("both") // "return", "exchange", "both"
+  appliesTo       String   @default("all")  // "all" or comma-separated product tags/collections
+  message         String?  // Message shown to customer when selecting this reason
+  mandatoryOptin  Boolean  @default(false)
+  // Refund modes for prepaid orders
+  refundPrepaidStoreCredit   Boolean @default(true)
+  refundPrepaidOriginal      Boolean @default(true)
+  // Refund modes for COD/manual orders
+  refundCodStoreCredit       Boolean @default(true)
+  refundCodBankTransfer      Boolean @default(false)
+  refundCodOther             Boolean @default(false)
+  // Requirements
+  photoRequired   Boolean  @default(false)
+  noteRequired    Boolean  @default(false)
+  // Return methods
+  methodSendLabel Boolean  @default(false)
+  methodShipBack  Boolean  @default(false)
+  methodReturnAtStore Boolean @default(false)
+  // Region
+  region          String   @default("all") // "all" or comma-separated country/region codes
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  @@index([shop])
+  @@index([shop, applicableFor])
+}
+
 // Easebuzz payment records
 model Payment {
   id          String   @id @default(uuid())
@@ -162,4 +195,69 @@ model Payment {
 
   @@index([shop, orderId])
   @@index([shop, reqId])
+}
+
+// Timeline events for returns
+model ReturnEvent {
+  id        String   @id @default(uuid())
+  shop      String
+  returnId  String   // references ReturnRequest.id
+  type      String   // status_change, note, tracking_update, refund_processed, pickup_scheduled, etc.
+  status    String?  // new status if status_change
+  message   String?
+  metadata  Json?
+  actor     String?  // "system", "merchant", "customer"
+  createdAt DateTime @default(now())
+
+  @@index([shop, returnId])
+  @@index([returnId, createdAt])
+}
+
+// Multi-provider logistics credentials
+model LogisticsConfig {
+  id              String   @id @default(uuid())
+  shop            String
+  providerKey     String   // e.g. "delhivery", "shiprocket"
+  displayName     String
+  credentials     String   // encrypted JSON
+  isDefault       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  region          String   @default("IN")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([shop, providerKey])
+  @@index([shop])
+}
+
+// Multi-provider payment credentials
+model PaymentConfig {
+  id              String   @id @default(uuid())
+  shop            String
+  providerKey     String   // e.g. "razorpay", "stripe"
+  displayName     String
+  credentials     String   // encrypted JSON
+  isDefault       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([shop, providerKey])
+  @@index([shop])
+}
+
+// WMS provider credentials
+model WmsConfig {
+  id              String   @id @default(uuid())
+  shop            String
+  providerKey     String   // e.g. "unicommerce", "zoho_inventory"
+  displayName     String
+  credentials     String   // encrypted JSON
+  isDefault       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([shop, providerKey])
+  @@index([shop])
 }
