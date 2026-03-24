@@ -3,7 +3,7 @@
 client_id = "7450d42da8f67ceda10723799de7f45d"
 name = "Public Returns Prime"
 application_url = "https://returns-public.onrender.com"
-embedded = true
+embedded = false
 handle = "returns-public-prime"
 
 [build]
@@ -26,7 +26,9 @@ use_legacy_install_flow = false
 [auth]
 redirect_urls = [
   "https://returns-public.onrender.com/auth/callback",
-  "https://returns-public.onrender.com/auth/shopify/callback"
+  "https://returns-public.onrender.com/auth/shopify/callback",
+  "https://robertson-don-trade-scored.trycloudflare.com/auth/callback",
+  "https://robertson-don-trade-scored.trycloudflare.com/auth/shopify/callback"
 ]
 
 [app_proxy]
