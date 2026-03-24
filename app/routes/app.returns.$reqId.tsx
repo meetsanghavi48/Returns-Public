@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, useSubmit, useNavigation } from "@remix-run/react";
+import { useLoaderData, useFetcher } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -14,8 +14,9 @@ import {
   Divider,
   Box,
   TextField,
+  List,
 } from "@shopify/polaris";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import {
@@ -27,6 +28,67 @@ import { processRefund } from "../services/refunds.server";
 import { createExchangeOrder } from "../services/exchanges.server";
 import { createDelhiveryPickup } from "../services/delhivery.server";
 import { auditLog } from "../services/audit.server";
+
+/* ─── helpers ─── */
+
+function getReturnId(r: any) {
+  const prefix =
+    r.requestType === "exchange"
+      ? "EXC"
+      : r.requestType === "mixed"
+        ? "MIX"
+        : "RET";
+  const num = r.reqNum
+    ? String(r.reqNum).padStart(3, "0")
+    : (r.reqId || "").slice(-6).toUpperCase();
+  return `${prefix}-${num}`;
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, { tone: any; label: string }> = {
+    pending: { tone: "attention", label: "Pending" },
+    approved: { tone: "info", label: "Approved" },
+    pickup_scheduled: { tone: "info", label: "Pickup Scheduled" },
+    in_transit: { tone: "info", label: "In Transit" },
+    delivered: { tone: "success", label: "Delivered" },
+    refunded: { tone: "success", label: "Refunded" },
+    exchange_fulfilled: { tone: "success", label: "Exchanged" },
+    rejected: { tone: "critical", label: "Rejected" },
+    archived: { tone: undefined, label: "Archived" },
+  };
+  const s = map[status] || { tone: undefined, label: status };
+  return <Badge tone={s.tone}>{s.label}</Badge>;
+}
+
+function formatDate(d: string | Date | null | undefined) {
+  if (!d) return "—";
+  return new Date(d).toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function eventIcon(type: string) {
+  switch (type) {
+    case "status_change":
+      return "→";
+    case "note":
+      return "✎";
+    case "tracking_update":
+      return "⊕";
+    case "refund_processed":
+      return "₹";
+    case "pickup_scheduled":
+      return "↑";
+    default:
+      return "•";
+  }
+}
+
+/* ─── LOADER ─── */
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -40,14 +102,15 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     throw new Response("Not found", { status: 404 });
   }
 
-  const auditLogs = await prisma.auditLog.findMany({
-    where: { shop, reqId: params.reqId },
+  const events = await prisma.returnEvent.findMany({
+    where: { shop, returnId: returnReq.id },
     orderBy: { createdAt: "desc" },
-    take: 20,
   });
 
-  return json({ returnReq, auditLogs });
+  return json({ returnReq, events });
 };
+
+/* ─── ACTION ─── */
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -129,7 +192,14 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
             status: "pickup_scheduled",
           },
         });
-        await auditLog(shop, null, reqId, "awb_attached", "admin", `AWB:${awb}`);
+        await auditLog(
+          shop,
+          null,
+          reqId,
+          "awb_attached",
+          "admin",
+          `AWB:${awb}`,
+        );
         return json({ ok: true, message: `AWB ${awb} attached` });
       }
 
@@ -140,8 +210,34 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
           where: { reqId, shop },
           data: { utrNumber: utr },
         });
-        await auditLog(shop, null, reqId, "utr_added", "admin", `UTR:${utr}`);
+        await auditLog(
+          shop,
+          null,
+          reqId,
+          "utr_added",
+          "admin",
+          `UTR:${utr}`,
+        );
         return json({ ok: true, message: `UTR ${utr} added` });
+      }
+
+      case "add_note": {
+        const note = formData.get("note") as string;
+        if (!note) return json({ error: "Note is required" }, { status: 400 });
+        const req = await prisma.returnRequest.findFirst({
+          where: { shop, reqId },
+        });
+        if (!req) return json({ error: "Not found" }, { status: 404 });
+        await prisma.returnEvent.create({
+          data: {
+            shop,
+            returnId: req.id,
+            type: "note",
+            message: note,
+            actor: "merchant",
+          },
+        });
+        return json({ ok: true, message: "Note added" });
       }
 
       default:
@@ -152,342 +248,510 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   }
 };
 
+/* ─── COMPONENT ─── */
+
 export default function ReturnDetail() {
-  const { returnReq, auditLogs } = useLoaderData<typeof loader>();
-  const submit = useSubmit();
-  const navigation = useNavigation();
-  const isLoading = navigation.state === "submitting";
+  const { returnReq, events } = useLoaderData<typeof loader>();
+  const fetcher = useFetcher<{ ok?: boolean; message?: string; error?: string }>();
+  const isLoading = fetcher.state === "submitting";
+
+  const [rejectReason, setRejectReason] = useState("");
+  const [noteText, setNoteText] = useState("");
   const [awbInput, setAwbInput] = useState("");
   const [utrInput, setUtrInput] = useState("");
 
   const r = returnReq as any;
   const items = (r.items || []) as any[];
+  const address = (r.address || {}) as any;
 
-  const returnIdPrefix = r.requestType === "exchange" ? "EXC" : r.requestType === "mixed" ? "MIX" : "RET";
-  const returnIdSuffix = (r.reqId || "").slice(-6).toUpperCase();
-  const displayReturnId = `${returnIdPrefix}-${returnIdSuffix}`;
-
-  const doAction = (intent: string, extra?: Record<string, string>) => {
-    const formData = new FormData();
-    formData.set("intent", intent);
-    if (extra) {
-      for (const [k, v] of Object.entries(extra)) {
-        formData.set(k, v);
-      }
+  // Clear note input after successful submission
+  useEffect(() => {
+    if (fetcher.data?.ok && fetcher.data?.message === "Note added") {
+      setNoteText("");
     }
-    submit(formData, { method: "post" });
-  };
+  }, [fetcher.data]);
 
   return (
     <Page
-      title={`${displayReturnId} — Order #${r.orderNumber || r.orderId}`}
-      subtitle={`${r.customerName || ""} • ${r.customerEmail || ""}`}
-      backAction={{ url: "/app/returns" }}
+      backAction={{ content: "Returns", url: "/app" }}
+      title={`Return ${getReturnId(r)}`}
+      titleMetadata={<StatusBadge status={r.status} />}
+      subtitle={`Order ${r.orderNumber ? `#${r.orderNumber}` : r.orderId}`}
     >
-      <Layout>
-        {/* Left column */}
-        <Layout.Section>
-          {/* Order Info */}
-          <Card>
-            <BlockStack gap="300">
-              <Text as="h2" variant="headingMd">
-                Order Details
-              </Text>
-              <Divider />
-              <InlineStack gap="400">
-                <BlockStack gap="100">
-                  <Text as="span" tone="subdued">Order ID</Text>
-                  <Text as="span">{r.orderId}</Text>
-                </BlockStack>
-                <BlockStack gap="100">
-                  <Text as="span" tone="subdued">Order #</Text>
-                  <Text as="span">#{r.orderNumber}</Text>
-                </BlockStack>
-                <BlockStack gap="100">
-                  <Text as="span" tone="subdued">Customer</Text>
-                  <Text as="span">{r.customerName || "—"}</Text>
-                </BlockStack>
-                <BlockStack gap="100">
-                  <Text as="span" tone="subdued">Type</Text>
-                  <Badge>{r.requestType}</Badge>
-                </BlockStack>
-              </InlineStack>
-              {r.isCod && (
-                <Banner tone="warning">This is a Cash on Delivery order</Banner>
-              )}
-            </BlockStack>
-          </Card>
+      {fetcher.data?.error && (
+        <Box paddingBlockEnd="400">
+          <Banner tone="critical">{fetcher.data.error}</Banner>
+        </Box>
+      )}
+      {fetcher.data?.ok && fetcher.data.message && (
+        <Box paddingBlockEnd="400">
+          <Banner tone="success">{fetcher.data.message}</Banner>
+        </Box>
+      )}
 
-          {/* Line Items */}
+      <Layout>
+        {/* ─── Main content — left column (2/3) ─── */}
+        <Layout.Section>
+          {/* Card: Items */}
           <Card>
             <BlockStack gap="300">
               <Text as="h2" variant="headingMd">
                 Items ({items.length})
               </Text>
               <Divider />
-              {items.map((item: any, idx: number) => (
-                <InlineStack key={idx} gap="300" align="space-between" blockAlign="center">
-                  <BlockStack gap="100">
-                    <Text as="span" fontWeight="semibold">
-                      {item.title}
-                    </Text>
-                    <Text as="span" variant="bodySm" tone="subdued">
-                      {item.variant_title || ""} &middot; Qty: {item.qty || 1}
-                    </Text>
-                    {item.reason && (
-                      <Text as="span" variant="bodySm" tone="subdued">
-                        Reason: {item.reason}
-                      </Text>
-                    )}
-                  </BlockStack>
-                  <InlineStack gap="200">
-                    <Text as="span">₹{item.price}</Text>
-                    <Badge tone={item.action === "exchange" ? "info" : undefined}>
-                      {item.action}
-                    </Badge>
-                  </InlineStack>
-                </InlineStack>
-              ))}
+              {items.length === 0 ? (
+                <Text as="p" tone="subdued">
+                  No items found.
+                </Text>
+              ) : (
+                items.map((item: any, idx: number) => (
+                  <Box key={idx}>
+                    <InlineStack
+                      gap="300"
+                      align="space-between"
+                      blockAlign="start"
+                    >
+                      <BlockStack gap="100">
+                        <Text as="span" fontWeight="semibold">
+                          {item.title}
+                        </Text>
+                        {item.variant_title && (
+                          <Text as="span" variant="bodySm" tone="subdued">
+                            {item.variant_title}
+                          </Text>
+                        )}
+                        <Text as="span" variant="bodySm" tone="subdued">
+                          Qty: {item.qty || 1}
+                        </Text>
+                        {item.reason && (
+                          <Text as="span" variant="bodySm" tone="subdued">
+                            Reason: {item.reason}
+                          </Text>
+                        )}
+                      </BlockStack>
+                      <BlockStack gap="100" inlineAlign="end">
+                        <Text as="span">
+                          {"\u20B9"}
+                          {Number(item.price || 0).toLocaleString("en-IN")}
+                        </Text>
+                        <Badge
+                          tone={item.action === "exchange" ? "info" : undefined}
+                        >
+                          {item.action || "return"}
+                        </Badge>
+                      </BlockStack>
+                    </InlineStack>
+                    {idx < items.length - 1 && <Divider />}
+                  </Box>
+                ))
+              )}
               <Divider />
               <InlineStack align="space-between">
-                <Text as="span" fontWeight="bold">Total</Text>
                 <Text as="span" fontWeight="bold">
-                  ₹{Number(r.totalPrice).toLocaleString("en-IN")}
+                  Total
+                </Text>
+                <Text as="span" fontWeight="bold">
+                  {"\u20B9"}
+                  {Number(r.totalPrice).toLocaleString("en-IN")}
                 </Text>
               </InlineStack>
             </BlockStack>
           </Card>
 
-          {/* Audit Log */}
+          {/* Card: Timeline */}
           <Card>
             <BlockStack gap="300">
-              <Text as="h2" variant="headingMd">Audit Log</Text>
+              <Text as="h2" variant="headingMd">
+                Timeline
+              </Text>
               <Divider />
-              {auditLogs.length === 0 ? (
-                <Text as="p" tone="subdued">No audit entries yet.</Text>
+              {(events as any[]).length === 0 ? (
+                <Text as="p" tone="subdued">
+                  No events yet.
+                </Text>
               ) : (
-                auditLogs.map((log: any) => (
-                  <InlineStack key={log.id} gap="300" align="space-between">
-                    <BlockStack gap="050">
-                      <Text as="span" variant="bodySm" fontWeight="semibold">
-                        {log.action}
-                      </Text>
+                (events as any[]).map((ev: any) => (
+                  <Box key={ev.id}>
+                    <InlineStack gap="300" align="space-between" blockAlign="start">
+                      <InlineStack gap="200" blockAlign="start">
+                        <Text as="span" variant="bodySm">
+                          {eventIcon(ev.type)}
+                        </Text>
+                        <BlockStack gap="050">
+                          <Text as="span" variant="bodySm" fontWeight="semibold">
+                            {ev.message || ev.type}
+                          </Text>
+                          {ev.actor && (
+                            <Text as="span" variant="bodySm" tone="subdued">
+                              by {ev.actor}
+                            </Text>
+                          )}
+                        </BlockStack>
+                      </InlineStack>
                       <Text as="span" variant="bodySm" tone="subdued">
-                        {log.details}
+                        {formatDate(ev.createdAt)}
                       </Text>
-                    </BlockStack>
-                    <Text as="span" variant="bodySm" tone="subdued">
-                      {new Date(log.createdAt).toLocaleString("en-IN")}
-                    </Text>
-                  </InlineStack>
+                    </InlineStack>
+                  </Box>
                 ))
               )}
             </BlockStack>
           </Card>
-        </Layout.Section>
 
-        {/* Right column */}
-        <Layout.Section variant="oneThird">
-          {/* Status + Actions */}
+          {/* Card: Add Note */}
           <Card>
             <BlockStack gap="300">
-              <Text as="h2" variant="headingMd">Status</Text>
-              <StatusBadge status={r.status} />
-
-              {r.refundMethod && (
-                <Text as="p" variant="bodySm" tone="subdued">
-                  Refund method: {r.refundMethod === "store_credit" ? "Store Credit" : "Original Payment"}
-                </Text>
-              )}
-
+              <Text as="h2" variant="headingMd">
+                Add Note
+              </Text>
               <Divider />
+              <fetcher.Form method="post">
+                <input type="hidden" name="intent" value="add_note" />
+                <BlockStack gap="200">
+                  <TextField
+                    label="Note"
+                    labelHidden
+                    value={noteText}
+                    onChange={setNoteText}
+                    multiline={3}
+                    autoComplete="off"
+                    placeholder="Add a note to the timeline..."
+                  />
+                  <InlineStack align="end">
+                    <Button
+                      submit
+                      disabled={!noteText.trim()}
+                      loading={isLoading}
+                    >
+                      Add Note
+                    </Button>
+                  </InlineStack>
+                </BlockStack>
+              </fetcher.Form>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
 
-              {/* Action buttons based on status */}
+        {/* ─── Sidebar — right column (1/3) ─── */}
+        <Layout.Section variant="oneThird">
+          {/* Card: Actions */}
+          <Card>
+            <BlockStack gap="300">
+              <Text as="h2" variant="headingMd">
+                Actions
+              </Text>
+              <Divider />
               <BlockStack gap="200">
                 {r.status === "pending" && (
                   <>
-                    <Button
-                      variant="primary"
-                      onClick={() => doAction("approve")}
-                      loading={isLoading}
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      tone="critical"
-                      onClick={() => doAction("reject")}
-                      loading={isLoading}
-                    >
-                      Reject
-                    </Button>
-                  </>
-                )}
-
-                {r.status === "approved" && !r.awb && (
-                  <Button
-                    variant="primary"
-                    onClick={() => doAction("create_pickup")}
-                    loading={isLoading}
-                  >
-                    Create Pickup
-                  </Button>
-                )}
-
-                {["delivered", "pickup_scheduled", "in_transit"].includes(r.status) && (
-                  <>
-                    {r.requestType !== "exchange" && !r.refundId && (
+                    <fetcher.Form method="post">
+                      <input type="hidden" name="intent" value="approve" />
                       <Button
-                        onClick={() => doAction("process_refund")}
+                        submit
+                        variant="primary"
+                        fullWidth
                         loading={isLoading}
                       >
-                        Process Refund
+                        Approve
                       </Button>
-                    )}
-                    {(r.requestType === "exchange" || r.requestType === "mixed") &&
-                      !r.exchangeOrderId && (
+                    </fetcher.Form>
+                    <fetcher.Form method="post">
+                      <input type="hidden" name="intent" value="reject" />
+                      <BlockStack gap="200">
+                        <TextField
+                          label="Rejection reason"
+                          value={rejectReason}
+                          onChange={setRejectReason}
+                          autoComplete="off"
+                          name="reason"
+                          placeholder="Optional reason..."
+                        />
                         <Button
-                          onClick={() => doAction("create_exchange")}
+                          submit
+                          tone="critical"
+                          fullWidth
                           loading={isLoading}
                         >
-                          Create Exchange Order
+                          Reject
                         </Button>
-                      )}
+                      </BlockStack>
+                    </fetcher.Form>
                   </>
                 )}
 
+                {r.status === "approved" && (
+                  <fetcher.Form method="post">
+                    <input type="hidden" name="intent" value="create_pickup" />
+                    <Button
+                      submit
+                      variant="primary"
+                      fullWidth
+                      loading={isLoading}
+                    >
+                      Create Pickup
+                    </Button>
+                  </fetcher.Form>
+                )}
+
+                {["delivered", "received"].includes(r.status) && (
+                  <fetcher.Form method="post">
+                    <input
+                      type="hidden"
+                      name="intent"
+                      value="process_refund"
+                    />
+                    <Button submit fullWidth loading={isLoading}>
+                      Process Refund
+                    </Button>
+                  </fetcher.Form>
+                )}
+
+                {["delivered", "pickup_scheduled", "in_transit"].includes(
+                  r.status,
+                ) &&
+                  (r.requestType === "exchange" ||
+                    r.requestType === "mixed") &&
+                  !r.exchangeOrderId && (
+                    <fetcher.Form method="post">
+                      <input
+                        type="hidden"
+                        name="intent"
+                        value="create_exchange"
+                      />
+                      <Button submit fullWidth loading={isLoading}>
+                        Create Exchange Order
+                      </Button>
+                    </fetcher.Form>
+                  )}
+
                 {r.status !== "archived" && r.status !== "pending" && (
-                  <Button
-                    onClick={() => doAction("archive")}
-                    loading={isLoading}
-                  >
-                    Archive
-                  </Button>
+                  <fetcher.Form method="post">
+                    <input type="hidden" name="intent" value="archive" />
+                    <Button submit fullWidth loading={isLoading}>
+                      Archive
+                    </Button>
+                  </fetcher.Form>
                 )}
 
                 {r.status === "archived" && (
-                  <Button
-                    onClick={() => doAction("unarchive")}
-                    loading={isLoading}
-                  >
-                    Unarchive
-                  </Button>
+                  <fetcher.Form method="post">
+                    <input type="hidden" name="intent" value="unarchive" />
+                    <Button submit fullWidth loading={isLoading}>
+                      Unarchive
+                    </Button>
+                  </fetcher.Form>
                 )}
               </BlockStack>
             </BlockStack>
           </Card>
 
-          {/* AWB Tracking */}
+          {/* Card: Customer */}
           <Card>
             <BlockStack gap="300">
-              <Text as="h2" variant="headingMd">Tracking</Text>
+              <Text as="h2" variant="headingMd">
+                Customer
+              </Text>
+              <Divider />
+              <BlockStack gap="200">
+                {r.customerName && (
+                  <InlineStack gap="200">
+                    <Text as="span" tone="subdued">
+                      Name:
+                    </Text>
+                    <Text as="span">{r.customerName}</Text>
+                  </InlineStack>
+                )}
+                {r.customerEmail && (
+                  <InlineStack gap="200">
+                    <Text as="span" tone="subdued">
+                      Email:
+                    </Text>
+                    <Text as="span">{r.customerEmail}</Text>
+                  </InlineStack>
+                )}
+                {address.phone && (
+                  <InlineStack gap="200">
+                    <Text as="span" tone="subdued">
+                      Phone:
+                    </Text>
+                    <Text as="span">{address.phone}</Text>
+                  </InlineStack>
+                )}
+              </BlockStack>
+              {(address.address1 || address.city) && (
+                <>
+                  <Divider />
+                  <BlockStack gap="100">
+                    <Text as="span" fontWeight="semibold" variant="bodySm">
+                      Shipping Address
+                    </Text>
+                    {address.name && (
+                      <Text as="span" variant="bodySm">
+                        {address.name}
+                      </Text>
+                    )}
+                    {address.address1 && (
+                      <Text as="span" variant="bodySm">
+                        {address.address1}
+                      </Text>
+                    )}
+                    {address.address2 && (
+                      <Text as="span" variant="bodySm">
+                        {address.address2}
+                      </Text>
+                    )}
+                    <Text as="span" variant="bodySm">
+                      {[address.city, address.province, address.zip]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </Text>
+                  </BlockStack>
+                </>
+              )}
+            </BlockStack>
+          </Card>
+
+          {/* Card: Logistics */}
+          <Card>
+            <BlockStack gap="300">
+              <Text as="h2" variant="headingMd">
+                Logistics
+              </Text>
               <Divider />
               {r.awb ? (
                 <BlockStack gap="200">
                   <InlineStack gap="200">
-                    <Text as="span" tone="subdued">AWB:</Text>
-                    <Text as="span" fontWeight="bold">{r.awb}</Text>
+                    <Text as="span" tone="subdued">
+                      AWB:
+                    </Text>
+                    <Text as="span" fontWeight="bold">
+                      {r.awb}
+                    </Text>
+                  </InlineStack>
+                  <InlineStack gap="200">
+                    <Text as="span" tone="subdued">
+                      Carrier:
+                    </Text>
+                    <Text as="span">Delhivery</Text>
                   </InlineStack>
                   {r.awbStatus && (
                     <InlineStack gap="200">
-                      <Text as="span" tone="subdued">Status:</Text>
+                      <Text as="span" tone="subdued">
+                        Status:
+                      </Text>
                       <Text as="span">{r.awbStatus}</Text>
                     </InlineStack>
                   )}
+                  <Button
+                    url={`https://www.delhivery.com/track/package/${r.awb}`}
+                    target="_blank"
+                    fullWidth
+                  >
+                    Track Shipment
+                  </Button>
                 </BlockStack>
               ) : (
                 <BlockStack gap="200">
-                  <Text as="p" tone="subdued">No AWB attached yet.</Text>
-                  <TextField
-                    label="Attach AWB manually"
-                    value={awbInput}
-                    onChange={setAwbInput}
-                    autoComplete="off"
-                  />
-                  <Button
-                    onClick={() => doAction("attach_awb", { awb: awbInput })}
-                    disabled={!awbInput}
-                    loading={isLoading}
-                  >
-                    Attach AWB
-                  </Button>
+                  <Text as="p" tone="subdued">
+                    No AWB attached yet.
+                  </Text>
+                  <fetcher.Form method="post">
+                    <input type="hidden" name="intent" value="attach_awb" />
+                    <BlockStack gap="200">
+                      <TextField
+                        label="Attach AWB manually"
+                        value={awbInput}
+                        onChange={setAwbInput}
+                        autoComplete="off"
+                        name="awb"
+                      />
+                      <Button
+                        submit
+                        disabled={!awbInput.trim()}
+                        loading={isLoading}
+                        fullWidth
+                      >
+                        Attach AWB
+                      </Button>
+                    </BlockStack>
+                  </fetcher.Form>
                 </BlockStack>
               )}
             </BlockStack>
           </Card>
 
-          {/* Exchange Order */}
-          {r.exchangeOrderId && (
-            <Card>
-              <BlockStack gap="200">
-                <Text as="h2" variant="headingMd">Exchange Order</Text>
-                <Divider />
+          {/* Card: Refund */}
+          <Card>
+            <BlockStack gap="300">
+              <Text as="h2" variant="headingMd">
+                Refund
+              </Text>
+              <Divider />
+              <InlineStack gap="200">
+                <Text as="span" tone="subdued">
+                  Method:
+                </Text>
+                <Text as="span">
+                  {r.refundMethod === "store_credit"
+                    ? "Store Credit"
+                    : r.refundMethod === "original"
+                      ? "Original Payment"
+                      : r.refundMethod || "—"}
+                </Text>
+              </InlineStack>
+              <InlineStack gap="200">
+                <Text as="span" tone="subdued">
+                  Amount:
+                </Text>
+                <Text as="span" fontWeight="bold">
+                  {r.refundAmount
+                    ? `\u20B9${Number(r.refundAmount).toLocaleString("en-IN")}`
+                    : "—"}
+                </Text>
+              </InlineStack>
+              <InlineStack gap="200">
+                <Text as="span" tone="subdued">
+                  Status:
+                </Text>
+                <Text as="span">
+                  {r.refundId ? "Processed" : "Not processed"}
+                </Text>
+              </InlineStack>
+              {r.utrNumber ? (
                 <InlineStack gap="200">
-                  <Text as="span" tone="subdued">Our #:</Text>
-                  <Text as="span" fontWeight="bold">{r.exchangeOrderName}</Text>
-                </InlineStack>
-                <InlineStack gap="200">
-                  <Text as="span" tone="subdued">Shopify:</Text>
-                  <Text as="span">{r.exchangeShopifyName}</Text>
-                </InlineStack>
-              </BlockStack>
-            </Card>
-          )}
-
-          {/* Refund Info */}
-          {r.refundId && (
-            <Card>
-              <BlockStack gap="200">
-                <Text as="h2" variant="headingMd">Refund</Text>
-                <Divider />
-                <InlineStack gap="200">
-                  <Text as="span" tone="subdued">Amount:</Text>
-                  <Text as="span" fontWeight="bold">
-                    ₹{Number(r.refundAmount).toLocaleString("en-IN")}
+                  <Text as="span" tone="subdued">
+                    UTR:
                   </Text>
+                  <Text as="span">{r.utrNumber}</Text>
                 </InlineStack>
-                {r.utrNumber ? (
-                  <InlineStack gap="200">
-                    <Text as="span" tone="subdued">UTR:</Text>
-                    <Text as="span">{r.utrNumber}</Text>
-                  </InlineStack>
-                ) : (
-                  <BlockStack gap="200">
-                    <TextField
-                      label="Add UTR Number"
-                      value={utrInput}
-                      onChange={setUtrInput}
-                      autoComplete="off"
-                    />
-                    <Button
-                      onClick={() => doAction("add_utr", { utr: utrInput })}
-                      disabled={!utrInput}
-                      loading={isLoading}
-                    >
-                      Add UTR
-                    </Button>
-                  </BlockStack>
-                )}
-              </BlockStack>
-            </Card>
-          )}
+              ) : (
+                r.refundId && (
+                  <fetcher.Form method="post">
+                    <input type="hidden" name="intent" value="add_utr" />
+                    <BlockStack gap="200">
+                      <TextField
+                        label="Add UTR Number"
+                        value={utrInput}
+                        onChange={setUtrInput}
+                        autoComplete="off"
+                        name="utr"
+                      />
+                      <Button
+                        submit
+                        disabled={!utrInput.trim()}
+                        loading={isLoading}
+                        fullWidth
+                      >
+                        Add UTR
+                      </Button>
+                    </BlockStack>
+                  </fetcher.Form>
+                )
+              )}
+            </BlockStack>
+          </Card>
         </Layout.Section>
       </Layout>
     </Page>
   );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { tone: any; label: string }> = {
-    pending: { tone: "attention", label: "Pending" },
-    approved: { tone: "info", label: "Approved" },
-    pickup_scheduled: { tone: "info", label: "Pickup Scheduled" },
-    in_transit: { tone: "info", label: "In Transit" },
-    delivered: { tone: "success", label: "Delivered" },
-    refunded: { tone: "success", label: "Refunded" },
-    exchange_fulfilled: { tone: "success", label: "Exchanged" },
-    rejected: { tone: "critical", label: "Rejected" },
-    archived: { tone: undefined, label: "Archived" },
-  };
-  const s = map[status] || { tone: undefined, label: status };
-  return <Badge tone={s.tone}>{s.label}</Badge>;
 }

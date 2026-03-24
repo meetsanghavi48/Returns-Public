@@ -12,6 +12,7 @@ import {
   BlockStack,
   InlineStack,
   Box,
+  Divider,
 } from "@shopify/polaris";
 import { useCallback } from "react";
 import { authenticate } from "../shopify.server";
@@ -46,14 +47,13 @@ interface MonthlyTrend {
 }
 
 interface AnalyticsData {
+  totalRequests: number;
+  approvalRate: number;
+  avgResolutionDays: number;
   statusCounts: StatusCount[];
   reasonBreakdown: ReasonBreakdown[];
   topProducts: TopProduct[];
   monthlyTrends: MonthlyTrend[];
-  totalReturns: number;
-  approvalRate: number;
-  avgResolutionDays: number;
-  totalRefunded: number;
   dateRange: string;
 }
 
@@ -78,28 +78,54 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const dateRange = url.searchParams.get("dateRange") || "30d";
 
   const dateFrom = getDateFilter(dateRange);
-  const dateFilter: { shop: string; createdAt?: { gte: Date } } = { shop };
+  const whereClause: { shop: string; createdAt?: { gte: Date } } = { shop };
   if (dateFrom) {
-    dateFilter.createdAt = { gte: dateFrom };
+    whereClause.createdAt = { gte: dateFrom };
   }
 
-  // Fetch all returns matching the date filter
+  // 1. Fetch all returns matching the date filter
   const returns = await prisma.returnRequest.findMany({
-    where: dateFilter,
+    where: whereClause,
     select: {
       status: true,
       items: true,
       refundAmount: true,
       createdAt: true,
-      approvedAt: true,
-      requestType: true,
+      archivedAt: true,
     },
   });
 
-  const totalReturns = returns.length;
+  // 1. Total requests count
+  const totalRequests = returns.length;
 
-  // Status counts
-  const statusMap = new Map<string, number>();
+  // 2. Approval rate (approved + refunded + exchanged / total * 100)
+  const approvedStatuses = new Set(["approved", "refunded", "exchanged"]);
+  const approvedCount = returns.filter((r) =>
+    approvedStatuses.has(r.status),
+  ).length;
+  const approvalRate =
+    totalRequests > 0
+      ? Math.round((approvedCount / totalRequests) * 1000) / 10
+      : 0;
+
+  // 3. Average resolution time (avg days between createdAt and archivedAt for archived returns)
+  let totalResolutionMs = 0;
+  let resolutionCount = 0;
+  for (const r of returns) {
+    if (r.archivedAt) {
+      totalResolutionMs +=
+        new Date(r.archivedAt).getTime() - new Date(r.createdAt).getTime();
+      resolutionCount++;
+    }
+  }
+  const avgResolutionDays =
+    resolutionCount > 0
+      ? Math.round(
+          (totalResolutionMs / resolutionCount / (1000 * 60 * 60 * 24)) * 10,
+        ) / 10
+      : 0;
+
+  // 4. Returns by status (count per status)
   const allStatuses = [
     "pending",
     "approved",
@@ -109,7 +135,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     "refunded",
     "exchanged",
     "rejected",
+    "archived",
   ];
+  const statusMap = new Map<string, number>();
   for (const s of allStatuses) {
     statusMap.set(s, 0);
   }
@@ -121,41 +149,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     count: statusMap.get(s) || 0,
   }));
 
-  // Approval rate
-  const decidedCount =
-    (statusMap.get("approved") || 0) +
-    (statusMap.get("pickup_scheduled") || 0) +
-    (statusMap.get("in_transit") || 0) +
-    (statusMap.get("delivered") || 0) +
-    (statusMap.get("refunded") || 0) +
-    (statusMap.get("exchanged") || 0) +
-    (statusMap.get("rejected") || 0);
-  const approvedCount = decidedCount - (statusMap.get("rejected") || 0);
-  const approvalRate = decidedCount > 0 ? Math.round((approvedCount / decidedCount) * 100) : 0;
-
-  // Avg resolution time (from createdAt to approvedAt for those that have it)
-  let totalResolutionMs = 0;
-  let resolutionCount = 0;
-  for (const r of returns) {
-    if (r.approvedAt) {
-      totalResolutionMs += new Date(r.approvedAt).getTime() - new Date(r.createdAt).getTime();
-      resolutionCount++;
-    }
-  }
-  const avgResolutionDays =
-    resolutionCount > 0
-      ? Math.round(totalResolutionMs / resolutionCount / (1000 * 60 * 60 * 24) * 10) / 10
-      : 0;
-
-  // Total refunded
-  let totalRefunded = 0;
-  for (const r of returns) {
-    if (r.refundAmount) {
-      totalRefunded += Number(r.refundAmount);
-    }
-  }
-
-  // Return reasons breakdown
+  // 5. Return reasons breakdown (parse items JSON, extract reasons, count + percentage)
   const reasonMap = new Map<string, number>();
   let totalItemsWithReason = 0;
   for (const r of returns) {
@@ -170,17 +164,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     .map(([reason, count]) => ({
       reason,
       count,
-      percentage: totalItemsWithReason > 0 ? Math.round((count / totalItemsWithReason) * 100) : 0,
+      percentage:
+        totalItemsWithReason > 0
+          ? Math.round((count / totalItemsWithReason) * 1000) / 10
+          : 0,
     }))
     .sort((a, b) => b.count - a.count);
 
-  // Top 10 returned products
+  // 6. Top 10 returned products (parse items JSON, group by title, count)
   const productMap = new Map<string, number>();
   for (const r of returns) {
     const items = (r.items as ReturnItem[]) || [];
     for (const item of items) {
       const title = item.title || "Unknown Product";
-      productMap.set(title, (productMap.get(title) || 0) + (item.quantity || 1));
+      productMap.set(
+        title,
+        (productMap.get(title) || 0) + (item.quantity || 1),
+      );
     }
   }
   const topProducts: TopProduct[] = Array.from(productMap.entries())
@@ -188,7 +188,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);
 
-  // Monthly trends
+  // 7. Monthly trends (group by month, count returns, sum refund amounts)
   const monthMap = new Map<string, { count: number; refundTotal: number }>();
   for (const r of returns) {
     const date = new Date(r.createdAt);
@@ -207,31 +207,33 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     .sort((a, b) => a.month.localeCompare(b.month));
 
   const data: AnalyticsData = {
+    totalRequests,
+    approvalRate,
+    avgResolutionDays,
     statusCounts,
     reasonBreakdown,
     topProducts,
     monthlyTrends,
-    totalReturns,
-    approvalRate,
-    avgResolutionDays,
-    totalRefunded: Math.round(totalRefunded * 100) / 100,
     dateRange,
   };
 
   return json(data);
 };
 
-const STATUS_BADGE_TONE: Record<string, "attention" | "info" | "success" | "critical" | undefined> =
-  {
-    pending: "attention",
-    approved: "info",
-    pickup_scheduled: "info",
-    in_transit: "info",
-    delivered: "success",
-    refunded: "success",
-    exchanged: "success",
-    rejected: "critical",
-  };
+const STATUS_BADGE_TONE: Record<
+  string,
+  "attention" | "info" | "success" | "critical" | "warning" | undefined
+> = {
+  pending: "attention",
+  approved: "info",
+  pickup_scheduled: "info",
+  in_transit: "info",
+  delivered: "success",
+  refunded: "success",
+  exchanged: "success",
+  rejected: "critical",
+  archived: "warning",
+};
 
 function formatStatus(status: string): string {
   return status
@@ -241,13 +243,13 @@ function formatStatus(status: string): string {
 }
 
 function formatCurrency(amount: number): string {
-  return `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `$${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatMonth(monthKey: string): string {
   const [year, month] = monthKey.split("-");
   const date = new Date(Number(year), Number(month) - 1);
-  return date.toLocaleDateString("en-IN", { year: "numeric", month: "short" });
+  return date.toLocaleDateString("en-US", { year: "numeric", month: "short" });
 }
 
 export default function Analytics() {
@@ -271,12 +273,12 @@ export default function Analytics() {
   ];
 
   return (
-    <Page title="Analytics">
-      <BlockStack gap="400">
-        {/* Date range filter */}
-        <Box paddingBlockEnd="200">
+    <Page title="Analytics" backAction={{ content: "Home", url: "/app" }}>
+      <BlockStack gap="500">
+        {/* Row 1 - Date range selector */}
+        <Card>
           <InlineStack align="end">
-            <div style={{ width: 200 }}>
+            <Box minWidth="220px">
               <Select
                 label="Date range"
                 labelInline
@@ -284,25 +286,25 @@ export default function Analytics() {
                 value={data.dateRange}
                 onChange={handleDateRangeChange}
               />
-            </div>
+            </Box>
           </InlineStack>
-        </Box>
+        </Card>
 
-        {/* Stats cards row */}
+        {/* Row 2 - 3 stat cards */}
         <Layout>
-          <Layout.Section variant="oneQuarter">
+          <Layout.Section variant="oneThird">
             <Card>
               <BlockStack gap="200">
                 <Text as="p" variant="bodySm" tone="subdued">
-                  Total Returns
+                  Total Requests
                 </Text>
                 <Text as="p" variant="headingXl">
-                  {data.totalReturns}
+                  {data.totalRequests}
                 </Text>
               </BlockStack>
             </Card>
           </Layout.Section>
-          <Layout.Section variant="oneQuarter">
+          <Layout.Section variant="oneThird">
             <Card>
               <BlockStack gap="200">
                 <Text as="p" variant="bodySm" tone="subdued">
@@ -314,45 +316,40 @@ export default function Analytics() {
               </BlockStack>
             </Card>
           </Layout.Section>
-          <Layout.Section variant="oneQuarter">
+          <Layout.Section variant="oneThird">
             <Card>
               <BlockStack gap="200">
                 <Text as="p" variant="bodySm" tone="subdued">
                   Avg Resolution Time
                 </Text>
                 <Text as="p" variant="headingXl">
-                  {data.avgResolutionDays}d
-                </Text>
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-          <Layout.Section variant="oneQuarter">
-            <Card>
-              <BlockStack gap="200">
-                <Text as="p" variant="bodySm" tone="subdued">
-                  Total Refunded
-                </Text>
-                <Text as="p" variant="headingXl">
-                  {formatCurrency(data.totalRefunded)}
+                  {data.avgResolutionDays} days
                 </Text>
               </BlockStack>
             </Card>
           </Layout.Section>
         </Layout>
 
-        {/* Returns by Status + Return Reasons */}
+        {/* Row 3 - Returns by Status */}
         <Layout>
-          <Layout.Section variant="oneHalf">
+          <Layout.Section>
             <Card>
               <BlockStack gap="400">
                 <Text as="h2" variant="headingMd">
                   Returns by Status
                 </Text>
-                <BlockStack gap="200">
+                <Divider />
+                <BlockStack gap="300">
                   {data.statusCounts.map((sc) => (
-                    <InlineStack key={sc.status} align="space-between" blockAlign="center">
-                      <Badge tone={STATUS_BADGE_TONE[sc.status]}>{formatStatus(sc.status)}</Badge>
-                      <Text as="span" variant="bodyMd">
+                    <InlineStack
+                      key={sc.status}
+                      align="space-between"
+                      blockAlign="center"
+                    >
+                      <Badge tone={STATUS_BADGE_TONE[sc.status]}>
+                        {formatStatus(sc.status)}
+                      </Badge>
+                      <Text as="span" variant="bodyMd" fontWeight="semibold">
                         {sc.count}
                       </Text>
                     </InlineStack>
@@ -361,36 +358,38 @@ export default function Analytics() {
               </BlockStack>
             </Card>
           </Layout.Section>
-          <Layout.Section variant="oneHalf">
+        </Layout>
+
+        {/* Row 4 - Return Reasons Breakdown */}
+        <Layout>
+          <Layout.Section>
             <Card>
               <BlockStack gap="400">
                 <Text as="h2" variant="headingMd">
-                  Return Reasons
+                  Return Reasons Breakdown
                 </Text>
+                <Divider />
                 {data.reasonBreakdown.length === 0 ? (
                   <Text as="p" variant="bodySm" tone="subdued">
                     No return reasons data available.
                   </Text>
                 ) : (
-                  <BlockStack gap="200">
-                    {data.reasonBreakdown.map((rb) => (
-                      <InlineStack key={rb.reason} align="space-between" blockAlign="center">
-                        <Text as="span" variant="bodyMd">
-                          {rb.reason}
-                        </Text>
-                        <Text as="span" variant="bodyMd">
-                          {rb.count} ({rb.percentage}%)
-                        </Text>
-                      </InlineStack>
-                    ))}
-                  </BlockStack>
+                  <DataTable
+                    columnContentTypes={["text", "numeric", "numeric"]}
+                    headings={["Reason", "Count", "Percentage"]}
+                    rows={data.reasonBreakdown.map((rb) => [
+                      rb.reason,
+                      rb.count,
+                      `${rb.percentage}%`,
+                    ])}
+                  />
                 )}
               </BlockStack>
             </Card>
           </Layout.Section>
         </Layout>
 
-        {/* Top Returned Products */}
+        {/* Row 5 - Top Returned Products */}
         <Layout>
           <Layout.Section>
             <Card>
@@ -398,6 +397,7 @@ export default function Analytics() {
                 <Text as="h2" variant="headingMd">
                   Top Returned Products
                 </Text>
+                <Divider />
                 {data.topProducts.length === 0 ? (
                   <Text as="p" variant="bodySm" tone="subdued">
                     No product return data available.
@@ -405,7 +405,7 @@ export default function Analytics() {
                 ) : (
                   <DataTable
                     columnContentTypes={["text", "numeric"]}
-                    headings={["Product", "Return Count"]}
+                    headings={["Product", "Times Returned"]}
                     rows={data.topProducts.map((p) => [p.title, p.count])}
                   />
                 )}
@@ -414,7 +414,7 @@ export default function Analytics() {
           </Layout.Section>
         </Layout>
 
-        {/* Monthly Trends */}
+        {/* Row 6 - Monthly Trends */}
         <Layout>
           <Layout.Section>
             <Card>
@@ -422,6 +422,7 @@ export default function Analytics() {
                 <Text as="h2" variant="headingMd">
                   Monthly Trends
                 </Text>
+                <Divider />
                 {data.monthlyTrends.length === 0 ? (
                   <Text as="p" variant="bodySm" tone="subdued">
                     No monthly trend data available.
@@ -429,7 +430,7 @@ export default function Analytics() {
                 ) : (
                   <DataTable
                     columnContentTypes={["text", "numeric", "numeric"]}
-                    headings={["Month", "Returns", "Refund Total"]}
+                    headings={["Month", "Returns", "Refund Amount"]}
                     rows={data.monthlyTrends.map((mt) => [
                       formatMonth(mt.month),
                       mt.count,
