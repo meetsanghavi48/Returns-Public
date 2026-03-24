@@ -9,65 +9,127 @@ import {
 } from "./base";
 
 // Ecom Express API — https://integration.ecomexpress.in/
-// Auth: username + password passed in request body (form data or JSON).
-// Workflow: Generate AWBs -> Pincode check -> Manifest/Create -> Track -> NDR
+// Auth: username + password passed as form-encoded body fields in every request.
+// Workflow: Fetch AWB -> Manifest/Create Shipment -> Track -> Cancel
 // Contact: Software.support@ecomexpress.in for API credentials.
 
 const API_BASE = "https://api.ecomexpress.in";
 const API_BASE_STAGING = "https://clbeta.ecomexpress.in";
 
+// ── API response types ──────────────────────────────────────────────
+
+interface EcomFetchAwbSuccess {
+  awb: string[];
+}
+
+interface EcomFetchAwbError {
+  reason?: string;
+  message?: string;
+}
+
+type EcomFetchAwbResponse = EcomFetchAwbSuccess | EcomFetchAwbError;
+
+interface EcomManifestShipmentResult {
+  success?: boolean;
+  status?: string;
+  reason?: string;
+  error?: string;
+  shipments?: Array<{ success: boolean }>;
+}
+
+interface EcomTrackingScan {
+  updated_on?: string;
+  scan_date_time?: string;
+  date?: string;
+  status?: string;
+  scan_status?: string;
+  reason_code?: string;
+  status_code?: string;
+  reason_code_description?: string;
+  location?: string;
+  city?: string;
+  remarks?: string;
+}
+
+interface EcomTrackingShipment {
+  current_status?: string;
+  status?: string;
+  reason_code?: string;
+  status_code?: string;
+  expected_date?: string;
+  scans?: EcomTrackingScan[];
+  scan_details?: EcomTrackingScan[];
+  error?: string;
+  reason?: string;
+}
+
+interface EcomPincodeInfo {
+  city?: string;
+  state?: string;
+  active?: boolean | string;
+  cod?: boolean | string;
+}
+
+interface EcomPincodeResponse {
+  pincodes?: EcomPincodeInfo[];
+}
+
+interface EcomCancelResult {
+  success?: boolean;
+  status?: string;
+  reason?: string;
+  error?: string;
+  message?: string;
+}
+
+interface EcomRawFallback {
+  raw: string;
+  status: number;
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────
+
 function getBase(credentials: Record<string, string>): string {
   return credentials.useSandbox === "true" ? API_BASE_STAGING : API_BASE;
 }
 
-async function ecomFetch(
+function isRawFallback(data: unknown): data is EcomRawFallback {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    "raw" in data &&
+    "status" in data
+  );
+}
+
+/**
+ * POST a form-encoded request to an Ecom Express endpoint.
+ * Returns parsed JSON, or a raw-text fallback if the response isn't valid JSON.
+ */
+async function ecomPost<T>(
   baseUrl: string,
   path: string,
   formData: Record<string, string>,
-): Promise<any> {
+): Promise<T | EcomRawFallback> {
   const url = `${baseUrl}${path}`;
   const body = new URLSearchParams(formData);
 
   const response = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: body.toString(),
   });
 
   const text = await response.text();
   try {
-    return JSON.parse(text);
+    return JSON.parse(text) as T;
   } catch {
     // Ecom Express sometimes returns XML or plain text
     return { raw: text, status: response.status };
   }
 }
 
-async function ecomFetchJSON(
-  baseUrl: string,
-  path: string,
-  body: unknown,
-): Promise<any> {
-  const url = `${baseUrl}${path}`;
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-
-  const text = await response.text();
-  try {
-    return JSON.parse(text);
-  } catch {
-    return { raw: text, status: response.status };
-  }
-}
+// ── Adapter ─────────────────────────────────────────────────────────
 
 export class EcomExpressAdapter extends LogisticsAdapter {
   readonly key = "ecom_express";
@@ -108,15 +170,9 @@ export class EcomExpressAdapter extends LogisticsAdapter {
 
   /**
    * Fetch a fresh AWB number from Ecom Express, then manifest the shipment.
-   * Step 1: POST /apiv2/fetch_awb/ — get an AWB number
-   * Step 2: POST /apiv2/manifest_awb/ — create the shipment with parcel details
-   * Docs: https://integration.ecomexpress.in/
    *
-   * Parcel fields include: AWB_NUMBER, ORDER_NUMBER, PRODUCT (PPD/COD/REV),
-   *   CONSIGNEE, CONSIGNEE_ADDRESS1, DESTINATION_CITY, PINCODE, STATE,
-   *   MOBILE, ITEM_DESCRIPTION, PIECES, COLLECTABLE_VALUE, DECLARED_VALUE,
-   *   ACTUAL_WEIGHT, LENGTH, BREADTH, HEIGHT, PICKUP_NAME, PICKUP_ADDRESS_LINE1,
-   *   RETURN_PINCODE, etc.
+   * Step 1: POST /apiv2/fetch_awb/  — obtain a reverse-pickup AWB number
+   * Step 2: POST /apiv2/manifest_awb/ — create the shipment with parcel details
    */
   async createPickup(
     params: PickupParams,
@@ -126,28 +182,34 @@ export class EcomExpressAdapter extends LogisticsAdapter {
     const base = getBase(credentials);
 
     try {
-      // Step 1: Fetch AWB number
-      const awbData = await ecomFetch(base, "/apiv2/fetch_awb/", {
-        username,
-        password,
-        count: "1",
-        type: "REV", // REV for reverse pickup
-      });
+      // Step 1: Fetch AWB number (type=REV for reverse pickup)
+      const awbData = await ecomPost<EcomFetchAwbResponse>(
+        base,
+        "/apiv2/fetch_awb/",
+        { username, password, count: "1", type: "REV" },
+      );
+
+      if (isRawFallback(awbData)) {
+        return {
+          success: false,
+          error: "Unexpected response from Ecom Express AWB endpoint",
+          rawResponse: awbData,
+        };
+      }
 
       let awbNumber: string | undefined;
 
-      if (awbData?.awb && Array.isArray(awbData.awb) && awbData.awb.length > 0) {
+      if ("awb" in awbData && Array.isArray(awbData.awb) && awbData.awb.length > 0) {
         awbNumber = String(awbData.awb[0]);
-      } else if (typeof awbData?.awb === "string") {
-        awbNumber = awbData.awb;
       }
 
       if (!awbNumber) {
+        const errData = awbData as EcomFetchAwbError;
         return {
           success: false,
           error:
-            awbData?.reason ||
-            awbData?.message ||
+            errData.reason ||
+            errData.message ||
             "Failed to fetch AWB number from Ecom Express",
           rawResponse: awbData,
         };
@@ -164,65 +226,67 @@ export class EcomExpressAdapter extends LogisticsAdapter {
           .join(", ")
           .slice(0, 200) || "Return Shipment";
 
-      const manifestPayload = {
+      const phone10 = (raw: string) => raw.replace(/[^0-9]/g, "").slice(-10);
+
+      const shipmentPayload = [
+        {
+          AWB_NUMBER: awbNumber,
+          ORDER_NUMBER: params.orderNumber,
+          PRODUCT: "REV",
+          CONSIGNEE: params.senderName,
+          CONSIGNEE_ADDRESS1: params.senderAddress.slice(0, 100),
+          CONSIGNEE_ADDRESS2: params.senderAddress.slice(100, 200) || "",
+          DESTINATION_CITY: params.senderCity,
+          PINCODE: params.senderPincode,
+          STATE: params.senderState,
+          MOBILE: phone10(params.senderPhone),
+          TELEPHONE: phone10(params.senderPhone),
+          ITEM_DESCRIPTION: itemDesc,
+          PIECES: params.items.reduce((sum, i) => sum + i.quantity, 0),
+          COLLECTABLE_VALUE:
+            params.paymentMode === "cod" ? totalAmount.toFixed(2) : "0",
+          DECLARED_VALUE: totalAmount.toFixed(2),
+          ACTUAL_WEIGHT: (params.weight / 1000).toFixed(2), // grams -> kg
+          LENGTH: params.length ?? 30,
+          BREADTH: params.breadth ?? 25,
+          HEIGHT: params.height ?? 10,
+          PICKUP_NAME: params.receiverName,
+          PICKUP_ADDRESS_LINE1: params.receiverAddress.slice(0, 100),
+          PICKUP_ADDRESS_LINE2: params.receiverAddress.slice(100, 200) || "",
+          PICKUP_PINCODE: params.receiverPincode,
+          PICKUP_PHONE: phone10(params.receiverPhone),
+          PICKUP_MOBILE: phone10(params.receiverPhone),
+          RETURN_PINCODE: params.receiverPincode,
+          RETURN_NAME: params.receiverName,
+          RETURN_ADDRESS_LINE1: params.receiverAddress.slice(0, 100),
+          RETURN_PHONE: phone10(params.receiverPhone),
+          RETURN_MOBILE: phone10(params.receiverPhone),
+          DG_SHIPMENT: "false",
+        },
+      ];
+
+      const manifestData = await ecomPost<
+        EcomManifestShipmentResult | EcomManifestShipmentResult[]
+      >(base, "/apiv2/manifest_awb/", {
         username,
         password,
-        json_input: JSON.stringify([
-          {
-            AWB_NUMBER: awbNumber,
-            ORDER_NUMBER: params.orderNumber,
-            PRODUCT: "REV", // REV = Reverse pickup
-            CONSIGNEE: params.senderName,
-            CONSIGNEE_ADDRESS1: params.senderAddress.slice(0, 100),
-            CONSIGNEE_ADDRESS2: params.senderAddress.slice(100, 200) || "",
-            DESTINATION_CITY: params.senderCity,
-            PINCODE: params.senderPincode,
-            STATE: params.senderState,
-            MOBILE: params.senderPhone.replace(/[^0-9]/g, "").slice(-10),
-            TELEPHONE: params.senderPhone.replace(/[^0-9]/g, "").slice(-10),
-            ITEM_DESCRIPTION: itemDesc,
-            PIECES: params.items.reduce((sum, i) => sum + i.quantity, 0),
-            COLLECTABLE_VALUE:
-              params.paymentMode === "cod" ? totalAmount.toFixed(2) : "0",
-            DECLARED_VALUE: totalAmount.toFixed(2),
-            ACTUAL_WEIGHT: (params.weight / 1000).toFixed(2), // grams -> kg
-            LENGTH: params.length || 30,
-            BREADTH: params.breadth || 25,
-            HEIGHT: params.height || 10,
-            PICKUP_NAME: params.receiverName,
-            PICKUP_ADDRESS_LINE1: params.receiverAddress.slice(0, 100),
-            PICKUP_ADDRESS_LINE2: params.receiverAddress.slice(100, 200) || "",
-            PICKUP_PINCODE: params.receiverPincode,
-            PICKUP_PHONE: params.receiverPhone
-              .replace(/[^0-9]/g, "")
-              .slice(-10),
-            PICKUP_MOBILE: params.receiverPhone
-              .replace(/[^0-9]/g, "")
-              .slice(-10),
-            RETURN_PINCODE: params.receiverPincode,
-            RETURN_NAME: params.receiverName,
-            RETURN_ADDRESS_LINE1: params.receiverAddress.slice(0, 100),
-            RETURN_PHONE: params.receiverPhone
-              .replace(/[^0-9]/g, "")
-              .slice(-10),
-            RETURN_MOBILE: params.receiverPhone
-              .replace(/[^0-9]/g, "")
-              .slice(-10),
-            DG_SHIPMENT: "false",
-          },
-        ]),
-      };
+        json_input: JSON.stringify(shipmentPayload),
+      });
 
-      const manifestData = await ecomFetch(
-        base,
-        "/apiv2/manifest_awb/",
-        manifestPayload,
-      );
+      if (isRawFallback(manifestData)) {
+        // If we got an AWB but manifest returned non-JSON, still surface it
+        return {
+          success: false,
+          error: "Unexpected response from Ecom Express manifest endpoint",
+          rawResponse: { awbData, manifestData },
+        };
+      }
 
-      // Check if manifest was successful
-      const shipmentResult = Array.isArray(manifestData)
+      const shipmentResult: EcomManifestShipmentResult = Array.isArray(manifestData)
         ? manifestData[0]
         : manifestData;
+
+      const trackingUrl = `https://ecomexpress.in/tracking/?awb_field=${awbNumber}`;
 
       if (
         shipmentResult?.success === true ||
@@ -232,18 +296,17 @@ export class EcomExpressAdapter extends LogisticsAdapter {
         return {
           success: true,
           awb: awbNumber,
-          trackingUrl: `https://ecomexpress.in/tracking/?awb_field=${awbNumber}`,
+          trackingUrl,
           rawResponse: { awbData, manifestData },
         };
       }
 
-      // Even if the response structure is unexpected, if we got an AWB and no error,
-      // consider it a success
-      if (awbNumber && !shipmentResult?.reason && !shipmentResult?.error) {
+      // If no explicit error, treat as success (AWB was allocated)
+      if (!shipmentResult?.reason && !shipmentResult?.error) {
         return {
           success: true,
           awb: awbNumber,
-          trackingUrl: `https://ecomexpress.in/tracking/?awb_field=${awbNumber}`,
+          trackingUrl,
           rawResponse: { awbData, manifestData },
         };
       }
@@ -251,26 +314,21 @@ export class EcomExpressAdapter extends LogisticsAdapter {
       return {
         success: false,
         error:
-          shipmentResult?.reason ||
-          shipmentResult?.error ||
+          shipmentResult.reason ||
+          shipmentResult.error ||
           "Failed to manifest shipment on Ecom Express",
         rawResponse: { awbData, manifestData },
       };
-    } catch (err: any) {
-      return {
-        success: false,
-        error: err.message || "Failed to create Ecom Express pickup",
-      };
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to create Ecom Express pickup";
+      return { success: false, error: message };
     }
   }
 
   /**
    * Track a shipment by AWB number.
    * Endpoint: POST /apiv2/track_me/
-   * Docs: https://integration.ecomexpress.in/
-   *
-   * Accepts single or multiple AWB numbers.
-   * Response includes scan details with status, location, timestamp.
    */
   async trackShipment(
     awb: string,
@@ -280,16 +338,28 @@ export class EcomExpressAdapter extends LogisticsAdapter {
     const base = getBase(credentials);
 
     try {
-      const data = await ecomFetch(base, "/apiv2/track_me/", {
-        username,
-        password,
-        awb: awb,
-      });
+      const data = await ecomPost<EcomTrackingShipment | EcomTrackingShipment[]>(
+        base,
+        "/apiv2/track_me/",
+        { username, password, awb },
+      );
 
-      // Response can be an array of shipment objects or a single object
-      const shipment = Array.isArray(data) ? data[0] : data;
+      if (isRawFallback(data)) {
+        return {
+          success: false,
+          awb,
+          currentStatus: "Unknown",
+          currentStatusCode: "",
+          events: [],
+          isDelivered: false,
+          error: "Unexpected response from Ecom Express tracking endpoint",
+          rawResponse: data,
+        };
+      }
 
-      if (!shipment || shipment?.error) {
+      const shipment: EcomTrackingShipment = Array.isArray(data) ? data[0] : data;
+
+      if (!shipment || shipment.error) {
         return {
           success: false,
           awb,
@@ -302,8 +372,10 @@ export class EcomExpressAdapter extends LogisticsAdapter {
         };
       }
 
-      const scans: any[] = shipment?.scans || shipment?.scan_details || [];
-      const events: TrackingEvent[] = scans.map((scan: any) => ({
+      const scans: EcomTrackingScan[] =
+        shipment.scans || shipment.scan_details || [];
+
+      const events: TrackingEvent[] = scans.map((scan) => ({
         timestamp: scan.updated_on || scan.scan_date_time || scan.date || "",
         status: scan.status || scan.scan_status || "",
         statusCode: scan.reason_code || scan.status_code || "",
@@ -313,11 +385,11 @@ export class EcomExpressAdapter extends LogisticsAdapter {
       }));
 
       const currentStatus =
-        shipment?.current_status ||
-        shipment?.status ||
+        shipment.current_status ||
+        shipment.status ||
         (events.length > 0 ? events[0].status : "In Transit");
       const currentStatusCode =
-        shipment?.reason_code || shipment?.status_code || "";
+        shipment.reason_code || shipment.status_code || "";
       const isDelivered =
         currentStatus.toLowerCase().includes("delivered") ||
         currentStatusCode === "999";
@@ -327,12 +399,14 @@ export class EcomExpressAdapter extends LogisticsAdapter {
         awb,
         currentStatus,
         currentStatusCode,
-        estimatedDelivery: shipment?.expected_date || undefined,
+        estimatedDelivery: shipment.expected_date || undefined,
         events,
         isDelivered,
         rawResponse: data,
       };
-    } catch (err: any) {
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to track shipment";
       return {
         success: false,
         awb,
@@ -340,7 +414,7 @@ export class EcomExpressAdapter extends LogisticsAdapter {
         currentStatusCode: "",
         events: [],
         isDelivered: false,
-        error: err.message || "Failed to track shipment",
+        error: message,
       };
     }
   }
@@ -348,10 +422,6 @@ export class EcomExpressAdapter extends LogisticsAdapter {
   /**
    * Check pincode serviceability.
    * Endpoint: POST /apiv2/pincodes/
-   * Docs: https://integration.ecomexpress.in/
-   *
-   * Returns list of serviceable pincodes with city, state, active status,
-   * and route codes.
    */
   async checkServiceability(
     _originPin: string,
@@ -362,14 +432,22 @@ export class EcomExpressAdapter extends LogisticsAdapter {
     const base = getBase(credentials);
 
     try {
-      const data = await ecomFetch(base, "/apiv2/pincodes/", {
-        username,
-        password,
-        pincode: destPin,
-      });
+      const data = await ecomPost<EcomPincodeInfo[] | EcomPincodeResponse>(
+        base,
+        "/apiv2/pincodes/",
+        { username, password, pincode: destPin },
+      );
 
-      // Response is typically an array of pincode objects
-      const pincodes = Array.isArray(data) ? data : data?.pincodes || [];
+      if (isRawFallback(data)) {
+        return {
+          serviceable: false,
+          error: "Unexpected response from Ecom Express pincodes endpoint",
+        };
+      }
+
+      const pincodes: EcomPincodeInfo[] = Array.isArray(data)
+        ? data
+        : (data as EcomPincodeResponse).pincodes || [];
 
       if (pincodes.length === 0) {
         return {
@@ -380,22 +458,21 @@ export class EcomExpressAdapter extends LogisticsAdapter {
 
       const pinInfo = pincodes[0];
       const isActive =
-        pinInfo?.active === true ||
-        pinInfo?.active === "Y" ||
-        pinInfo?.active === "1";
+        pinInfo.active === true ||
+        pinInfo.active === "Y" ||
+        pinInfo.active === "1";
 
       return {
         serviceable: isActive,
         codAvailable:
-          pinInfo?.cod === true ||
-          pinInfo?.cod === "Y" ||
-          pinInfo?.cod === "1",
+          pinInfo.cod === true ||
+          pinInfo.cod === "Y" ||
+          pinInfo.cod === "1",
       };
-    } catch (err: any) {
-      return {
-        serviceable: false,
-        error: err.message || "Failed to check serviceability",
-      };
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to check serviceability";
+      return { serviceable: false, error: message };
     }
   }
 
@@ -408,10 +485,7 @@ export class EcomExpressAdapter extends LogisticsAdapter {
     const { username, password } = credentials;
 
     if (!username || !password) {
-      return {
-        valid: false,
-        error: "Both username and password are required",
-      };
+      return { valid: false, error: "Both username and password are required" };
     }
 
     try {
@@ -430,18 +504,16 @@ export class EcomExpressAdapter extends LogisticsAdapter {
       }
 
       return { valid: true };
-    } catch (err: any) {
-      return {
-        valid: false,
-        error: err.message || "Failed to validate credentials",
-      };
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to validate credentials";
+      return { valid: false, error: message };
     }
   }
 
   /**
    * Cancel a shipment by AWB number.
    * Endpoint: POST /apiv2/cancel_awb/
-   * Docs: https://integration.ecomexpress.in/
    */
   async cancelPickup(
     awb: string,
@@ -451,13 +523,20 @@ export class EcomExpressAdapter extends LogisticsAdapter {
     const base = getBase(credentials);
 
     try {
-      const data = await ecomFetch(base, "/apiv2/cancel_awb/", {
-        username,
-        password,
-        awbs: awb,
-      });
+      const data = await ecomPost<EcomCancelResult | EcomCancelResult[]>(
+        base,
+        "/apiv2/cancel_awb/",
+        { username, password, awbs: awb },
+      );
 
-      const result = Array.isArray(data) ? data[0] : data;
+      if (isRawFallback(data)) {
+        return {
+          success: false,
+          error: "Unexpected response from Ecom Express cancel endpoint",
+        };
+      }
+
+      const result: EcomCancelResult = Array.isArray(data) ? data[0] : data;
 
       if (
         result?.success === true ||
@@ -475,11 +554,10 @@ export class EcomExpressAdapter extends LogisticsAdapter {
           result?.message ||
           "Cancellation failed",
       };
-    } catch (err: any) {
-      return {
-        success: false,
-        error: err.message || "Failed to cancel Ecom Express pickup",
-      };
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to cancel Ecom Express pickup";
+      return { success: false, error: message };
     }
   }
 }
