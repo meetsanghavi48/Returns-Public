@@ -1,178 +1,239 @@
 # BLAKC Returns Manager — AUDIT
 
-## Existing Files & Status
+> Last updated: 2026-03-24
 
-### Configuration (Phase 1 — DONE, DO NOT TOUCH)
-| File | Status | Notes |
-|------|--------|-------|
-| package.json | Complete | Remix + Shopify App + Polaris |
-| shopify.app.toml | Complete | App proxy at /apps/returns |
-| render.yaml | Complete | Free tier, Node 18 |
-| vite.config.ts | Complete | Remix + HMR |
-| tsconfig.json | Complete | Strict, ~/\* alias |
-| .env.example | Complete | Core env vars |
+## Phase Completion Status
 
-### Prisma Schema (Phase 1)
-| Model | Exists | Notes |
-|-------|--------|-------|
-| Session | Yes | Shopify session storage |
-| Shop | Yes | Per-shop config, Delhivery/Easebuzz creds |
-| ReturnRequest | Yes | Core returns model |
-| ExchangeCounter | Yes | Sequential EXC numbering |
-| ReturnCounter | Yes | Sequential return numbering |
-| AuditLog | Yes | Compliance trail |
-| Settings | Yes | Key-value per shop |
-| ReturnReason | Yes | Configurable reasons |
-| Payment | Yes | Easebuzz payment records |
+| Phase | Status | Details |
+|-------|--------|---------|
+| **Phase 1 — Auth/Setup** | ✅ DONE | Pre-existing. Not touched per rules. |
+| **Phase 2 — Database** | 🔨 PARTIAL | Models added to schema + Prisma generated. **Migration NOT run** (needs DB connection). encryption.server.ts + validators.ts done. |
+| **Phase 3 — Logistics Adapters** | ✅ DONE | Base class, registry, 37 adapters (10 real, 27 stubs), logistics.server.ts orchestration |
+| **Phase 4 — Customer Portal** | ✅ DONE | Pre-existing and complete. No changes needed. |
+| **Phase 5 — Integrations Hub** | ✅ DONE | Polaris page with 6 tabs, connect/disconnect/test modals, 3 sub-routes |
+| **Phase 6 — Payment Adapters** | ✅ DONE | Base class, registry, 20 adapters (8 real, 12 stubs) |
+| **Phase 7 — Tracking Cron** | ✅ DONE | Unified api.cron.tsx + tracking.server.ts with bulk refresh |
+| **Phase 8 — WMS Adapters** | ✅ DONE | Base class, registry, 14 adapters (2 real, 12 stubs) |
+| **Phase 9 — Chat/Mobile/Marketing** | ✅ DONE | Webhook receivers for 11 chat, 11 mobile, 7 marketing providers |
+| **Phase 10 — Settings/Analytics** | 🔨 PARTIAL | Analytics dashboard done. Notifications done. **Tests NOT written.** |
 
-### Models from SPEC — MISSING (need to add)
-| Model | Status | Notes |
-|-------|--------|-------|
-| ReturnSettings | MISSING | Use existing Settings model instead |
-| Return | EXISTS as ReturnRequest | Equivalent, keep existing |
-| ReturnEvent | MISSING | Need for timeline tracking |
-| LogisticsConfig | MISSING | Multi-provider logistics credentials |
-| PaymentConfig | MISSING | Multi-provider payment credentials |
-| WmsConfig | MISSING | WMS provider credentials |
+## Prisma Schema — All 13 Models
 
-### Core Services
-| File | Exists | Status |
-|------|--------|--------|
-| app/db.server.ts | Yes | Complete — singleton Prisma |
-| app/shopify.server.ts | Yes | Complete — auth, webhooks |
-| app/services/returns.server.ts | Yes | Complete — CRUD, auto-approve |
-| app/services/delhivery.server.ts | Yes | Complete — single provider |
-| app/services/payments.server.ts | Yes | Complete — Easebuzz only |
-| app/services/refunds.server.ts | Yes | Complete — Shopify refunds + store credit |
-| app/services/exchanges.server.ts | Yes | Complete — draft orders |
-| app/services/policies.server.ts | Yes | Complete — eligibility checks |
-| app/services/settings.server.ts | Yes | Complete — key-value CRUD |
-| app/services/audit.server.ts | Yes | Complete |
-| app/services/shopify.server.ts | Yes | Complete — REST/GraphQL helpers |
-| app/services/admin-session.server.ts | Yes | Complete — cookie auth |
-| app/utils/encryption.server.ts | MISSING | Need AES-256-GCM |
-| app/utils/validators.ts | MISSING | Need Zod schemas |
-| app/services/logistics.server.ts | MISSING | Need multi-provider orchestration |
-| app/services/tracking.server.ts | MISSING | Need tracking service |
-| app/services/notifications.server.ts | MISSING | Need email notifications |
-
-### Adapters — ALL MISSING
-| System | Status |
-|--------|--------|
-| app/adapters/logistics/base.ts | MISSING |
-| app/adapters/logistics/registry.ts | MISSING |
-| app/adapters/logistics/\*.ts (16+ Indian + 6 global + 11 stubs) | MISSING |
-| app/adapters/payments/base.ts | MISSING |
-| app/adapters/payments/registry.ts | MISSING |
-| app/adapters/payments/\*.ts (6 Tier 1 + 14 stubs) | MISSING |
-| app/adapters/wms/base.ts | MISSING |
-| app/adapters/wms/registry.ts | MISSING |
-| app/adapters/wms/\*.ts (2 Tier 1 + 12 stubs) | MISSING |
-
-### Routes — Embedded Admin (app.\*)
-| Route | Exists | Status |
+| Model | Origin | Status |
 |-------|--------|--------|
-| app.tsx | Yes | Complete — layout + nav |
-| app.\_index.tsx | Yes | Complete — redirects to admin |
-| app.returns.tsx | Yes | Complete — list view |
-| app.returns.$reqId.tsx | Yes | Complete — detail view |
-| app.returns.new.tsx | Yes | Complete — manual creation |
-| app.settings.tsx | Yes | Complete — settings form |
-| app.audit.tsx | Yes | Complete — audit log |
-| app.integrations.tsx | MISSING | Need integrations hub |
-| app.integrations.logistics.tsx | MISSING | |
-| app.integrations.payments.tsx | MISSING | |
-| app.integrations.wms.tsx | MISSING | |
-| app.analytics.tsx | MISSING | Need analytics dashboard |
+| Session | Phase 1 | ✅ Exists |
+| Shop | Phase 1 | ✅ Exists |
+| ReturnRequest | Phase 1 | ✅ Exists |
+| ExchangeCounter | Phase 1 | ✅ Exists |
+| ReturnCounter | Phase 1 | ✅ Exists |
+| AuditLog | Phase 1 | ✅ Exists |
+| Settings | Phase 1 | ✅ Exists |
+| ReturnReason | Phase 1 | ✅ Exists |
+| Payment | Phase 1 | ✅ Exists |
+| ReturnEvent | This session | ✅ Added |
+| LogisticsConfig | This session | ✅ Added |
+| PaymentConfig | This session | ✅ Added |
+| WmsConfig | This session | ✅ Added |
 
-### Routes — Standalone Admin (admin.\*)
-| Route | Exists | Status |
-|-------|--------|--------|
-| admin.tsx | Yes | Complete — layout |
-| admin.dashboard.tsx | Yes | Complete |
-| admin.returns.tsx | Yes | BUG: accessToken undefined in loader |
-| admin.return.$reqId.tsx | Yes | Complete |
-| admin.settings.tsx | Yes | Complete — landing page |
-| admin.settings\_.general.tsx | Yes | Complete |
-| admin.settings\_.policies.tsx | Yes | Complete |
-| admin.settings\_.reasons.tsx | Yes | Complete |
-| admin.audit.tsx | Yes | Complete |
+## Configuration (Phase 1 — DO NOT TOUCH)
 
-### Routes — Customer Portal (portal.\*)
-| Route | Exists | Status |
-|-------|--------|--------|
-| portal.$shop.tsx | Yes | Complete — layout |
-| portal.$shop.\_index.tsx | Yes | Complete — order lookup |
-| portal.$shop.request.tsx | Yes | Complete — item selection |
-| portal.$shop.exchange.tsx | Yes | Complete — exchange variants |
-| portal.$shop.confirm.tsx | Yes | Complete — confirmation |
-| portal.$shop.tracking.$reqId.tsx | Yes | Complete |
-| portal.$shop.tracking.\_index.tsx | Yes | Complete |
-| portal.$shop.variants.tsx | Yes | Complete — API endpoint |
+| File | Status |
+|------|--------|
+| package.json | Complete — Remix + Shopify App + Polaris + Zod |
+| shopify.app.toml | Complete — App proxy at /apps/returns |
+| render.yaml | Complete — Free tier, Node 18 |
+| vite.config.ts | Complete — Remix + HMR |
+| tsconfig.json | Complete — Strict, ~/\* alias |
+| .env.example | Needs update — missing ENCRYPTION_KEY, SENDGRID_API_KEY |
 
-### Routes — API & Webhooks
-| Route | Exists | Status |
-|-------|--------|--------|
-| webhooks.tsx | Yes | Complete |
-| api.health.tsx | Yes | Complete |
-| api.gdpr.tsx | Yes | Complete |
-| api.cron.pickups.ts | Yes | Complete — Delhivery only |
-| api.cron.tracking.ts | Yes | Complete — Delhivery only |
-| api.payments.callback.tsx | Yes | Complete — Easebuzz |
-| api.portal-redirect.tsx | Yes | Complete |
-| api.cron.tsx | MISSING | Need unified cron endpoint |
+## Core Services
 
-### Chat/WhatsApp Webhooks — ALL MISSING
-### Mobile App Integrations — ALL MISSING
-### Marketing/CRM Integrations — ALL MISSING
-### Tests — ALL MISSING
+| File | Status |
+|------|--------|
+| app/db.server.ts | ✅ Complete — singleton Prisma |
+| app/shopify.server.ts | ✅ Complete — auth, webhooks |
+| app/services/returns.server.ts | ✅ Complete — CRUD, auto-approve |
+| app/services/delhivery.server.ts | ✅ Complete — single provider (legacy) |
+| app/services/payments.server.ts | ✅ Complete — Easebuzz (legacy) |
+| app/services/refunds.server.ts | ✅ Complete — Shopify refunds + store credit |
+| app/services/exchanges.server.ts | ✅ Complete — draft orders |
+| app/services/policies.server.ts | ✅ Complete — eligibility checks |
+| app/services/settings.server.ts | ✅ Complete — key-value CRUD |
+| app/services/audit.server.ts | ✅ Complete |
+| app/services/shopify.server.ts | ✅ Complete — REST/GraphQL helpers |
+| app/services/admin-session.server.ts | ✅ Complete — cookie auth |
+| app/utils/encryption.server.ts | ✅ Created — AES-256-GCM |
+| app/utils/validators.ts | ✅ Created — Zod schemas |
+| app/services/logistics.server.ts | ✅ Created — multi-provider orchestration |
+| app/services/tracking.server.ts | ✅ Created — bulk tracking refresh |
+| app/services/notifications.server.ts | ✅ Created — SendGrid email |
 
-## Known Bugs
-1. `admin.returns.tsx` line 54: `accessToken` undefined in loader (destructures only `{ shop }`)
+## Adapter System
 
-## What Needs To Be Built (by Phase)
+### Logistics Adapters (37 total: 10 real, 27 stubs)
 
-### Phase 2 — Database & Core Services
-- [ ] Add LogisticsConfig, PaymentConfig, WmsConfig, ReturnEvent models to schema
-- [ ] Run migration
-- [ ] Build encryption.server.ts
-- [ ] Build validators.ts
-- [ ] Update app.\_index.tsx dashboard with stats (currently just redirects)
+| Adapter | Type | Region | Fetch Calls |
+|---------|------|--------|-------------|
+| delhivery | **REAL** | IN | 2 |
+| shiprocket | **REAL** | IN | 6 |
+| nimbuspost | **REAL** | IN | 6 |
+| ithink | **REAL** | IN | 2 |
+| ecom_express | **REAL** | IN | 3 |
+| shipway | **REAL** | IN | 4 |
+| shyplite | **REAL** | IN | 2 |
+| shippo | **REAL** | global | 4 |
+| easypost | **REAL** | global | 4 |
+| shipstation | **REAL** | global | 5 |
+| xpressbees | STUB | IN | — |
+| shadowfax | STUB | IN | — |
+| dtdc | STUB | IN | — |
+| bluedart | STUB | IN | — |
+| ekart | STUB | IN | — |
+| pickrr | STUB | IN | — |
+| eshipz | STUB | IN | — |
+| borzo | STUB | IN | — |
+| porter | STUB | IN | — |
+| dunzo | STUB | IN | — |
+| lalamove | STUB | global | — |
+| amazon_shipping | STUB | IN | — |
+| fedex | STUB | global | — |
+| ups | STUB | global | — |
+| dhl | STUB | global | — |
+| australia_post | STUB | AU | — |
+| royal_mail | STUB | GB | — |
+| canada_post | STUB | CA | — |
+| postnl | STUB | NL | — |
+| correos | STUB | ES | — |
+| aramex | STUB | GCC | — |
+| dhl_gcc | STUB | GCC | — |
+| quiqup | STUB | GCC | — |
+| oto | STUB | GCC | — |
+| easy_parcel | STUB | SEA | — |
+| starlinks | STUB | global | — |
 
-### Phase 3 — Logistics Adapter System
-- [ ] Base adapter class + registry
-- [ ] 16 Indian logistics adapters (Delhivery real, others researched/stubbed)
-- [ ] 6 global logistics adapters
-- [ ] 11 Tier 2 stubs
-- [ ] logistics.server.ts orchestration service
+### Payment Adapters (20 total: 8 real, 12 stubs)
 
-### Phase 4 — Customer Portal
-- Already complete at portal.$shop.\* — may need minor updates
+| Adapter | Type | Fetch Calls |
+|---------|------|-------------|
+| razorpay | **REAL** | 5 |
+| razorpay_x | **REAL** | 9 |
+| cashfree | **REAL** | 5 |
+| stripe | **REAL** | 5 |
+| shopify_credit | **REAL** | 3 |
+| payu | **REAL** | 4 |
+| paytm | **REAL** | 4 |
+| easebuzz | **REAL** | 6 |
+| adyen | STUB | — |
+| cashgram | STUB | — |
+| transbnk | STUB | — |
+| shopflo | STUB | — |
+| nector | STUB | — |
+| easyrewardz | STUB | — |
+| gyftr | STUB | — |
+| flits | STUB | — |
+| credityard | STUB | — |
+| tap | STUB | — |
+| paypal | STUB | — |
+| klarna | STUB | — |
 
-### Phase 5 — Integrations Hub
-- [ ] app.integrations.tsx with tabs
-- [ ] Logistics/Payments/WMS connect/disconnect routes
+### WMS Adapters (14 total: 2 real, 12 stubs)
 
-### Phase 6 — Payment Adapters
-- [ ] Base adapter + registry
-- [ ] 6 Tier 1 payment adapters
-- [ ] 14 Tier 2 stubs
-- [ ] payments.server.ts multi-provider service
+| Adapter | Type | Fetch Calls |
+|---------|------|-------------|
+| unicommerce | **REAL** | 6 |
+| zoho_inventory | **REAL** | 8 |
+| fynd | STUB | — |
+| omuni | STUB | — |
+| vinculum | STUB | — |
+| vinculum_marmeto | STUB | — |
+| easyecom | STUB | — |
+| easyecom_v3 | STUB | — |
+| browntape | STUB | — |
+| increff | STUB | — |
+| bluecherry | STUB | — |
+| idf | STUB | — |
+| automyze | STUB | — |
+| eshopbox | STUB | — |
 
-### Phase 7 — Tracking Cron
-- [ ] Unified api.cron.tsx endpoint
-- [ ] tracking.server.ts service
+## Routes — Embedded Admin (app.\*)
 
-### Phase 8 — WMS Adapters
-- [ ] Base adapter + registry
-- [ ] 2 Tier 1 WMS adapters
-- [ ] 12 Tier 2 stubs
+| Route | Status |
+|-------|--------|
+| app.tsx | ✅ Complete — layout + nav (Integrations + Analytics added) |
+| app.\_index.tsx | ✅ Complete — redirects to admin |
+| app.returns.tsx | ✅ Complete — list view |
+| app.returns.$reqId.tsx | ✅ Complete — detail view |
+| app.returns.new.tsx | ✅ Complete — manual creation |
+| app.settings.tsx | ✅ Complete — settings form |
+| app.audit.tsx | ✅ Complete — audit log |
+| app.integrations.tsx | ✅ Created — integrations hub with 6 tabs |
+| app.integrations.logistics.tsx | ✅ Created — connect/disconnect/test |
+| app.integrations.payments.tsx | ✅ Created — connect/disconnect/test |
+| app.integrations.wms.tsx | ✅ Created — connect/disconnect/test |
+| app.analytics.tsx | ✅ Created — stats, reasons, top products, trends |
 
-### Phase 9 — Chat + Mobile + Marketing
-- [ ] All webhook receivers and stubs
+## Routes — Standalone Admin (admin.\*)
 
-### Phase 10 — Settings + Analytics + Polish
-- [ ] Enhanced app.settings.tsx
-- [ ] app.analytics.tsx
-- [ ] notifications.server.ts
-- [ ] Tests with 80% coverage
+| Route | Status |
+|-------|--------|
+| admin.tsx | ✅ Complete — layout |
+| admin.dashboard.tsx | ✅ Complete |
+| admin.returns.tsx | ✅ Fixed — accessToken bug resolved |
+| admin.return.$reqId.tsx | ✅ Complete |
+| admin.settings.tsx | ✅ Complete — landing page |
+| admin.settings\_.general.tsx | ✅ Complete |
+| admin.settings\_.policies.tsx | ✅ Complete |
+| admin.settings\_.reasons.tsx | ✅ Complete |
+| admin.audit.tsx | ✅ Complete |
+
+## Routes — Customer Portal (portal.\*)
+
+| Route | Status |
+|-------|--------|
+| portal.$shop.tsx | ✅ Complete — layout |
+| portal.$shop.\_index.tsx | ✅ Complete — order lookup |
+| portal.$shop.request.tsx | ✅ Complete — item selection |
+| portal.$shop.exchange.tsx | ✅ Complete — exchange variants |
+| portal.$shop.confirm.tsx | ✅ Complete — confirmation |
+| portal.$shop.tracking.$reqId.tsx | ✅ Complete |
+| portal.$shop.tracking.\_index.tsx | ✅ Complete |
+| portal.$shop.variants.tsx | ✅ Complete — API endpoint |
+
+## Routes — API & Webhooks
+
+| Route | Status |
+|-------|--------|
+| webhooks.tsx | ✅ Complete |
+| api.health.tsx | ✅ Complete |
+| api.gdpr.tsx | ✅ Complete |
+| api.cron.pickups.ts | ✅ Complete — Delhivery |
+| api.cron.tracking.ts | ✅ Complete — Delhivery |
+| api.cron.tsx | ✅ Created — unified multi-provider cron |
+| api.payments.callback.tsx | ✅ Complete — Easebuzz |
+| api.portal-redirect.tsx | ✅ Complete |
+| api.webhooks.chat.$provider.tsx | ✅ Created — 11 chat providers |
+| api.mobile.$provider.tsx | ✅ Created — 11 mobile providers |
+| api.events.$provider.tsx | ✅ Created — 7 marketing providers |
+
+## API Research Docs (docs/apis/)
+
+18 files: delhivery, shiprocket, nimbuspost, razorpay, razorpay_x, cashfree, stripe, shippo, easypost, shipstation, payu, paytm, easebuzz, unicommerce, zoho_inventory, xpressbees, ithink, ecom_express, shipway
+
+## Known Issues
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| admin.returns.tsx accessToken bug | Fixed | ✅ Resolved |
+| Prisma migration not run | Medium | Schema updated, `migrate dev` needs DB connection |
+| No tests exist | Medium | Tests folder empty, 0% coverage |
+| .env.example missing new vars | Low | ENCRYPTION_KEY, SENDGRID_API_KEY not documented |
+| Some Phase 1 files have uncommitted changes | Low | portal.\*, admin.\*, returns.server.ts, portal.css |
+
+## What Needs To Be Built Next
+
+1. Run `npx prisma migrate dev --name add_returns_v2_models`
+2. Update `.env.example` with ENCRYPTION_KEY, SENDGRID_API_KEY
+3. Write tests — encryption, validators, adapters, services (target 80% coverage)
+4. Upgrade stubs to real implementations as API docs are provided
+5. Push to remote → verify Render deployment
+6. Test live at https://returns-public.onrender.com
