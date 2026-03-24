@@ -8,3 +8,6 @@ build/
 _reference/
 prisma/*.db
 prisma/migrations/*/migration_lock.toml
+coverage/
+.claude-flow/
+.claude/
