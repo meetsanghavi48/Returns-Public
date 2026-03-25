@@ -16,7 +16,6 @@ import {
   InlineStack,
   Text,
   Grid,
-  Frame,
   Toast,
 } from "@shopify/polaris";
 import { useState, useCallback, useEffect } from "react";

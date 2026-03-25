@@ -221,7 +221,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-const TABS = ["Logistics", "Payments", "WMS", "Chat", "Mobile", "Marketing & CRM"];
+const TABS = ["Payments", "WMS", "Chat", "Mobile", "Marketing & CRM"];
 
 export default function AdminIntegrations() {
   const data = useLoaderData<typeof loader>() as LoaderData;
@@ -282,17 +282,14 @@ export default function AdminIntegrations() {
       </div>
 
       {selectedTab === 0 && (
-        <ProviderGrid category="logistics" adapters={data.logistics.available} connected={data.logistics.connected} showToast={showToast} />
-      )}
-      {selectedTab === 1 && (
         <ProviderGrid category="payments" adapters={data.payments.available} connected={data.payments.connected} showToast={showToast} />
       )}
-      {selectedTab === 2 && (
+      {selectedTab === 1 && (
         <ProviderGrid category="wms" adapters={data.wms.available} connected={data.wms.connected} showToast={showToast} />
       )}
-      {selectedTab === 3 && <ComingSoon title="Chat Integrations" description="Connect WhatsApp and helpdesk platforms. Webhook endpoints available at /api/webhooks/chat/{provider}" />}
-      {selectedTab === 4 && <ComingSoon title="Mobile App Builders" description="Sync returns data with Vajro, Tapcart, and other mobile commerce platforms." />}
-      {selectedTab === 5 && <ComingSoon title="Marketing & CRM" description="Connect returns data to Klaviyo, HubSpot, and other platforms for customer retention workflows." />}
+      {selectedTab === 2 && <ComingSoon title="Chat Integrations" description="Connect WhatsApp and helpdesk platforms. Webhook endpoints available at /api/webhooks/chat/{provider}" />}
+      {selectedTab === 3 && <ComingSoon title="Mobile App Builders" description="Sync returns data with Vajro, Tapcart, and other mobile commerce platforms." />}
+      {selectedTab === 4 && <ComingSoon title="Marketing & CRM" description="Connect returns data to Klaviyo, HubSpot, and other platforms for customer retention workflows." />}
     </>
   );
 }

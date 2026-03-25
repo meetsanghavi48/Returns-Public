@@ -13,8 +13,8 @@ import {
   Text,
 } from "@shopify/polaris";
 import { useState, useEffect } from "react";
-import { requireAdminAuth } from "../services/admin-session.server";
-import { getAllSettings, setSetting } from "../services/settings.server";
+import { requireAdminAuth } from "~/services/admin-session.server";
+import { getAllSettings, setSetting } from "~/services/settings.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { shop, accessToken } = await requireAdminAuth(request);
