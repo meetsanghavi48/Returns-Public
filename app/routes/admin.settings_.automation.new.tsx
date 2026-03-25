@@ -1,9 +1,9 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { useActionData, useSubmit, useNavigation } from "@remix-run/react";
-import { requireAdminAuth } from "~/services/admin-session.server";
-import prisma from "~/db.server";
-import RuleBuilder from "~/components/RuleBuilder";
+import { requireAdminAuth } from "../services/admin-session.server";
+import prisma from "../db.server";
+import RuleBuilder from "../components/RuleBuilder";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await requireAdminAuth(request);
@@ -11,7 +11,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { shop, accessToken } = await requireAdminAuth(request);
+  const { shop } = await requireAdminAuth(request);
   const formData = await request.formData();
   const name = formData.get("name") as string;
   const description = formData.get("description") as string;

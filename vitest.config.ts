@@ -12,9 +12,11 @@ export default defineConfig({
       include: [
         "app/utils/**",
         "app/adapters/**",
-        "app/services/logistics.server.ts",
-        "app/services/tracking.server.ts",
-        "app/services/notifications.server.ts",
+        "app/services/**",
+      ],
+      exclude: [
+        "app/services/shopify.server.ts",
+        "app/services/admin-session.server.ts",
       ],
     },
   },

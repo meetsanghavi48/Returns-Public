@@ -4,6 +4,7 @@ import { updateOrderTags } from "./shopify.server";
 import { auditLog } from "./audit.server";
 import { getSetting } from "./settings.server";
 import { runAutomationsForReturn } from "./automation.server";
+import { sendNotification } from "./email-templates.server";
 
 // Check if order items include a freebie that should be auto-added
 function checkFreebieItems(
@@ -223,6 +224,27 @@ export async function submitReturnRequest(
     await autoApproveRequest(shop, accessToken, reqId, data.orderId, requestType);
   }
 
+  // Increment billing usage
+  try {
+    await prisma.billingUsage.upsert({
+      where: { shop },
+      update: { requestsUsed: { increment: 1 } },
+      create: { shop, requestsUsed: 1, billingCycleEnd: new Date(Date.now() + 30 * 86400000) },
+    });
+  } catch (e: any) {
+    console.error("[Billing] increment error:", e.message);
+  }
+
+  // Send notification
+  const eventKey = requestType === "exchange" ? "exchange_raised" : "return_raised";
+  sendNotification(shop, eventKey, reqId, {
+    customer_name: data.customerName || "Customer",
+    customer_email: data.customerEmail || "",
+    order_number: data.orderNumber || data.orderId,
+    request_id: reqId,
+    items_list: items.map((i: any) => `${i.title || "Item"} x${i.qty || 1}`).join(", "),
+  }).catch((e) => console.error("[Notification] send error:", e.message));
+
   // Run automation rules for the new return
   const returnRecord = await prisma.returnRequest.findFirst({ where: { reqId, shop } });
   if (returnRecord) {
@@ -390,6 +412,16 @@ export async function approveRequest(
     "Manual approval",
   );
 
+  // Send approval notification
+  const approveEvent = request.requestType === "exchange" ? "exchange_approved" : "return_approved";
+  sendNotification(shop, approveEvent, reqId, {
+    customer_name: request.customerName || "Customer",
+    customer_email: request.customerEmail || "",
+    order_number: request.orderNumber || request.orderId,
+    request_id: reqId,
+    awb_number: request.awb || "",
+  }).catch((e) => console.error("[Notification] send error:", e.message));
+
   // Run automation rules on status change
   runAutomationsForReturn(request.id, shop, accessToken, "status_changed").catch((e) =>
     console.error("[Automation] status_changed trigger error:", e.message),
@@ -423,6 +455,15 @@ export async function rejectRequest(
     "admin",
     reason || "Manual rejection",
   );
+
+  // Send rejection notification
+  sendNotification(shop, "return_rejected", reqId, {
+    customer_name: request.customerName || "Customer",
+    customer_email: request.customerEmail || "",
+    order_number: request.orderNumber || request.orderId,
+    request_id: reqId,
+    rejection_reason: reason || "Does not meet return policy requirements",
+  }).catch((e) => console.error("[Notification] send error:", e.message));
 
   await applyPostActionPolicies(shop, accessToken, reqId, "rejected");
 

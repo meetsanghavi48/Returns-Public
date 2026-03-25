@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { Outlet, useLoaderData } from "@remix-run/react";
+import { Outlet, useLoaderData, useOutletContext } from "@remix-run/react";
 import prisma from "../db.server";
 import { getSetting } from "../services/settings.server";
 
@@ -14,7 +14,7 @@ export const links = () => [
   },
 ];
 
-export const loader = async ({ params }: LoaderFunctionArgs) => {
+export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const shopDomain = params.shop;
   if (!shopDomain) throw new Response("Shop not found", { status: 404 });
 
@@ -32,7 +32,23 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
   const buttonColor = await getSetting<string>(shopDomain, "portal_button_color", "#C84B31");
   const bannerUrl = await getSetting<string>(shopDomain, "portal_banner_url", "");
 
-  return json({ shop: shopDomain, buttonColor, bannerUrl });
+  // Language detection from Accept-Language header
+  let translations: Record<string, string> = {};
+  try {
+    const acceptLang = request.headers.get("Accept-Language") || "en";
+    const preferredLocale = acceptLang.split(",")[0].split("-")[0].trim();
+
+    if (preferredLocale !== "en") {
+      const language = await prisma.language.findFirst({
+        where: { shop: shopDomain, locale: preferredLocale, isPublished: true },
+      });
+      if (language) {
+        translations = (language.translations || {}) as Record<string, string>;
+      }
+    }
+  } catch {}
+
+  return json({ shop: shopDomain, buttonColor, bannerUrl, translations });
 };
 
 // Darken a hex color by a percentage
@@ -45,7 +61,7 @@ function darkenColor(hex: string, percent: number): string {
 }
 
 export default function PortalLayout() {
-  const { shop, buttonColor, bannerUrl } = useLoaderData<typeof loader>();
+  const { shop, buttonColor, bannerUrl, translations } = useLoaderData<typeof loader>();
 
   const accentHover = darkenColor(buttonColor, 10);
 
@@ -65,9 +81,9 @@ export default function PortalLayout() {
               <img src={bannerUrl} alt="Store Banner" className="portal-banner-img" />
             </div>
             <div className="portal-hero-content">
-              <h1 className="portal-logo">Returns & Exchanges</h1>
+              <h1 className="portal-logo">{translations?.portal_title || "Returns & Exchanges"}</h1>
               <main className="portal-main portal-main-hero">
-                <Outlet />
+                <Outlet context={{ translations }} />
               </main>
             </div>
           </div>
@@ -75,10 +91,10 @@ export default function PortalLayout() {
       ) : (
         <>
           <header className="portal-header">
-            <h1 className="portal-logo">Returns Portal</h1>
+            <h1 className="portal-logo">{translations?.portal_title || "Returns Portal"}</h1>
           </header>
           <main className="portal-main">
-            <Outlet />
+            <Outlet context={{ translations }} />
           </main>
         </>
       )}

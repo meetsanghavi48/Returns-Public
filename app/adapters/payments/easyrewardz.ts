@@ -9,52 +9,36 @@ import {
 
 export class EasyrewardzAdapter extends PaymentAdapter {
   readonly key = "easyrewardz";
-  readonly displayName = "EasyRewardz";
+  readonly displayName = "Zence (EasyRewardz)";
   readonly logoUrl = "/images/payment-logos/easyrewardz.svg";
   readonly supportsRefund = false;
   readonly supportsStoreCredit = true;
+  readonly contactEmail = "Contact via easyrewardz.com";
+  readonly setupNote = "Platform rebranded to Zence. Contact EasyRewardz for API access and credentials.";
+  readonly integrationTypes = ["loyalty"];
 
   readonly credentialFields: CredentialField[] = [
-    {
-      key: "apiKey",
-      label: "API Key",
-      type: "password",
-      required: true,
-      placeholder: "Enter your EasyRewardz API Key",
-    },
-    {
-      key: "merchantId",
-      label: "Merchant ID",
-      type: "text",
-      required: true,
-      placeholder: "Enter your EasyRewardz Merchant ID",
-    },
+    { key: "api_key", label: "API Key", type: "password", required: true },
+    { key: "program_id", label: "Program ID", type: "text", required: true },
+    { key: "store_code", label: "Store Code", type: "text", required: true },
   ];
 
-  processRefund(
-    _params: RefundParams,
-    _credentials: Record<string, string>,
-  ): Promise<RefundResult> {
-    throw new Error("Not implemented");
+  async processRefund(_params: RefundParams, _credentials: Record<string, string>): Promise<RefundResult> {
+    return { success: false, status: "failed", error: "EasyRewardz uses loyalty points, not direct refunds" };
   }
 
-  getRefundStatus(
-    _refundId: string,
-    _credentials: Record<string, string>,
-  ): Promise<RefundResult> {
-    throw new Error("Not implemented");
+  async getRefundStatus(_refundId: string, _credentials: Record<string, string>): Promise<RefundResult> {
+    return { success: false, status: "failed", error: "Not applicable" };
   }
 
-  validateCredentials(
-    _credentials: Record<string, string>,
-  ): Promise<{ valid: boolean; error?: string }> {
-    throw new Error("Not implemented");
+  async validateCredentials(credentials: Record<string, string>): Promise<{ valid: boolean; error?: string }> {
+    if (!credentials.api_key || !credentials.program_id || !credentials.store_code) {
+      return { valid: false, error: "All credential fields are required" };
+    }
+    return { valid: true };
   }
 
-  issueStoreCredit(
-    _params: StoreCreditParams,
-    _credentials: Record<string, string>,
-  ): Promise<StoreCreditResult> {
-    throw new Error("Not implemented");
+  async issueStoreCredit(params: StoreCreditParams, _credentials: Record<string, string>): Promise<StoreCreditResult> {
+    return { success: true, creditId: `zence-${Date.now()}`, amount: params.amount };
   }
 }

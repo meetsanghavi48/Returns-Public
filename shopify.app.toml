@@ -2,7 +2,7 @@
 
 client_id = "7450d42da8f67ceda10723799de7f45d"
 name = "Public Returns Prime"
-application_url = "https://returns-public.onrender.com"
+application_url = "https://returns-manager-production-b295.up.railway.app"
 embedded = false
 handle = "returns-public-prime"
 
@@ -25,14 +25,12 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://returns-public.onrender.com/auth/callback",
-  "https://returns-public.onrender.com/auth/shopify/callback",
-  "https://robertson-don-trade-scored.trycloudflare.com/auth/callback",
-  "https://robertson-don-trade-scored.trycloudflare.com/auth/shopify/callback"
+  "https://returns-manager-production-b295.up.railway.app/auth/callback",
+  "https://returns-manager-production-b295.up.railway.app/auth/shopify/callback"
 ]
 
 [app_proxy]
-url = "https://returns-public.onrender.com/portal"
+url = "https://returns-manager-production-b295.up.railway.app/portal"
 subpath = "returns"
 prefix = "apps"
 

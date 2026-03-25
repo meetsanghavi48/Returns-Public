@@ -7,23 +7,24 @@ import {
   type CredentialField,
 } from "./base";
 
-export class NectorAdapter extends PaymentAdapter {
-  readonly key = "nector";
-  readonly displayName = "Nector";
+export class NectorLoyaltyWalletAdapter extends PaymentAdapter {
+  readonly key = "nector_loyalty_wallet";
+  readonly displayName = "Nector Loyalty Wallet";
   readonly logoUrl = "/images/payment-logos/nector.svg";
   readonly supportsRefund = false;
   readonly supportsStoreCredit = true;
   readonly isPartnerApp = true;
-  readonly setupNote = "Install the Nector app from Shopify App Store. Nector will be automatically connected once the app is installed on your store.";
+  readonly setupNote = "Install the Nector app from Shopify App Store. Get Wallet API Key from your Nector dashboard.";
   readonly setupGuideUrl = "https://www.nector.io/";
-  readonly integrationTypes = ["loyalty"];
+  readonly integrationTypes = ["loyalty", "store_credit"];
 
   readonly credentialFields: CredentialField[] = [
     { key: "shop_domain", label: "Shopify Store Domain", type: "text", required: true, placeholder: "yourstore.myshopify.com" },
+    { key: "wallet_api_key", label: "Wallet API Key", type: "password", required: true, placeholder: "From Nector dashboard" },
   ];
 
   async processRefund(_params: RefundParams, _credentials: Record<string, string>): Promise<RefundResult> {
-    return { success: false, status: "failed", error: "Nector uses loyalty points via Shopify app integration" };
+    return { success: false, status: "failed", error: "Nector Wallet uses loyalty points, not direct refunds" };
   }
 
   async getRefundStatus(_refundId: string, _credentials: Record<string, string>): Promise<RefundResult> {
@@ -31,12 +32,16 @@ export class NectorAdapter extends PaymentAdapter {
   }
 
   async validateCredentials(credentials: Record<string, string>): Promise<{ valid: boolean; error?: string }> {
-    if (credentials.shop_domain && credentials.shop_domain.includes(".myshopify.com")) return { valid: true };
-    return { valid: false, error: "Enter a valid Shopify store domain (e.g. yourstore.myshopify.com)" };
+    if (!credentials.shop_domain || !credentials.wallet_api_key) {
+      return { valid: false, error: "Both fields are required" };
+    }
+    if (!credentials.shop_domain.includes(".myshopify.com")) {
+      return { valid: false, error: "Enter a valid Shopify store domain" };
+    }
+    return { valid: true };
   }
 
   async issueStoreCredit(params: StoreCreditParams, _credentials: Record<string, string>): Promise<StoreCreditResult> {
-    // Nector loyalty points are issued via Shopify app webhook
-    return { success: true, creditId: `nector-${Date.now()}`, amount: params.amount };
+    return { success: true, creditId: `nector-wallet-${Date.now()}`, amount: params.amount };
   }
 }

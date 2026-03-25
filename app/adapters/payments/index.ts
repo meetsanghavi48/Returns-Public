@@ -16,11 +16,13 @@ import { CashgramAdapter } from "./cashgram";
 import { TransbnkAdapter } from "./transbnk";
 import { ShopfloAdapter } from "./shopflo";
 import { NectorAdapter } from "./nector";
+import { NectorLoyaltyWalletAdapter } from "./nector_loyalty_wallet";
 import { EasyrewardzAdapter } from "./easyrewardz";
 import { GyftrAdapter } from "./gyftr";
 import { FlitsAdapter } from "./flits";
 import { CredityardAdapter } from "./credityard";
 import { TapAdapter } from "./tap";
+import { YotpoAdapter } from "./yotpo";
 import { PaypalAdapter } from "./paypal";
 import { KlarnaAdapter } from "./klarna";
 
@@ -38,11 +40,13 @@ paymentRegistry.register(new EasebuzzAdapter());
 paymentRegistry.register(new TransbnkAdapter());
 paymentRegistry.register(new ShopfloAdapter());
 paymentRegistry.register(new NectorAdapter());
+paymentRegistry.register(new NectorLoyaltyWalletAdapter());
 paymentRegistry.register(new EasyrewardzAdapter());
 paymentRegistry.register(new GyftrAdapter());
 paymentRegistry.register(new FlitsAdapter());
 paymentRegistry.register(new CredityardAdapter());
 paymentRegistry.register(new TapAdapter());
+paymentRegistry.register(new YotpoAdapter());
 paymentRegistry.register(new PaypalAdapter());
 paymentRegistry.register(new KlarnaAdapter());
 

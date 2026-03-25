@@ -34,7 +34,36 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
   try {
     const data = JSON.parse(decodeURIComponent(dataParam));
-    return json({ data, shop: params.shop });
+    const shopDomain = params.shop!;
+
+    // Load global refund mode settings
+    const { getSetting } = await import("../services/settings.server");
+    const isCod = data.is_cod || false;
+
+    let refundOptions: Array<{ value: string; label: string }> = [];
+
+    if (isCod) {
+      // COD / Cash on Delivery / payment pending orders
+      const codStoreCredit = await getSetting<boolean>(shopDomain, "refund_cod_store_credit", true);
+      const codBankTransfer = await getSetting<boolean>(shopDomain, "refund_cod_bank_transfer", false);
+      const codOther = await getSetting<boolean>(shopDomain, "refund_cod_other", false);
+      if (codStoreCredit) refundOptions.push({ value: "store_credit", label: "Store Credit" });
+      if (codBankTransfer) refundOptions.push({ value: "bank_transfer", label: "Bank Transfer" });
+      if (codOther) refundOptions.push({ value: "other", label: "Other" });
+    } else {
+      // Prepaid / Online paid orders
+      const prepaidStoreCredit = await getSetting<boolean>(shopDomain, "refund_prepaid_store_credit", true);
+      const prepaidOriginal = await getSetting<boolean>(shopDomain, "refund_prepaid_original", true);
+      if (prepaidOriginal) refundOptions.push({ value: "original", label: "Original Payment" });
+      if (prepaidStoreCredit) refundOptions.push({ value: "store_credit", label: "Store Credit" });
+    }
+
+    // Fallback: if nothing enabled, show original
+    if (refundOptions.length === 0) {
+      refundOptions.push({ value: "original", label: "Original Payment" });
+    }
+
+    return json({ data, shop: shopDomain, refundOptions, isCod });
   } catch {
     throw redirect(`/portal/${params.shop}`);
   }
@@ -83,12 +112,12 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 };
 
 export default function PortalConfirm() {
-  const { data, shop } = useLoaderData<typeof loader>();
+  const { data, shop, refundOptions, isCod } = useLoaderData<typeof loader>();
   const actionData = useActionData<any>();
   const navigation = useNavigation();
   const isLoading = navigation.state === "submitting";
   const nav = useNavigate();
-  const [refundMethod, setRefundMethod] = useState("original");
+  const [refundMethod, setRefundMethod] = useState((refundOptions as any[])[0]?.value || "original");
 
   const selectedItems = data.selected_items || [];
   const totalAmount = selectedItems.reduce(
@@ -209,26 +238,31 @@ export default function PortalConfirm() {
       {!isExchangeOnly && (
         <div className="portal-card">
           <h3>Refund Method</h3>
+          {isCod && (
+            <p style={{ fontSize: 12, color: "var(--portal-accent)", fontWeight: 600, marginBottom: 8 }}>
+              COD / Payment pending order
+            </p>
+          )}
           <div className="portal-toggle-group" style={{ marginTop: 8 }}>
-            <button
-              className={`portal-toggle ${refundMethod === "original" ? "active" : ""}`}
-              onClick={() => setRefundMethod("original")}
-              type="button"
-            >
-              Original Payment
-            </button>
-            <button
-              className={`portal-toggle ${refundMethod === "store_credit" ? "active" : ""}`}
-              onClick={() => setRefundMethod("store_credit")}
-              type="button"
-            >
-              Store Credit
-            </button>
+            {(refundOptions as any[]).map((opt: any) => (
+              <button
+                key={opt.value}
+                className={`portal-toggle ${refundMethod === opt.value ? "active" : ""}`}
+                onClick={() => setRefundMethod(opt.value)}
+                type="button"
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
           <p style={{ fontSize: 13, color: "var(--portal-text-muted)", marginTop: 8 }}>
             {refundMethod === "original"
-              ? "Refund will be processed to your original payment method. A shipping fee may be deducted."
-              : "Receive store credit for the full amount. Can be used on future purchases."}
+              ? "Refund will be processed to your original payment method."
+              : refundMethod === "store_credit"
+                ? "Receive store credit for the full amount. Can be used on future purchases."
+                : refundMethod === "bank_transfer"
+                  ? "Refund will be transferred to your bank account."
+                  : "Refund will be processed via an alternative method."}
           </p>
         </div>
       )}

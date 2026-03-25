@@ -60,6 +60,24 @@ export default function AdminLayout() {
           </div>
 
           <div className="admin-sidebar-section">
+            <div className="admin-sidebar-section-title">Insights</div>
+            <NavLink
+              to="/admin/analytics"
+              className={({ isActive }) => `admin-nav-item ${isActive ? "active" : ""}`}
+            >
+              <span className="admin-nav-icon">{"\uD83D\uDCCA"}</span>
+              Analytics
+            </NavLink>
+            <NavLink
+              to="/admin/export"
+              className={({ isActive }) => `admin-nav-item ${isActive ? "active" : ""}`}
+            >
+              <span className="admin-nav-icon">{"\uD83D\uDCE5"}</span>
+              Export Data
+            </NavLink>
+          </div>
+
+          <div className="admin-sidebar-section">
             <div className="admin-sidebar-section-title">Configuration</div>
             <NavLink
               to="/admin/settings"

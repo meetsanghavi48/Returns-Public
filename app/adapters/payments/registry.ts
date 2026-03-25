@@ -8,6 +8,11 @@ export interface PaymentAdapterEntry {
   supportsRefund: boolean;
   supportsStoreCredit: boolean;
   adapter: PaymentAdapter;
+  setupNote?: string;
+  setupGuideUrl?: string;
+  contactEmail?: string;
+  isPartnerApp?: boolean;
+  integrationTypes?: string[];
 }
 
 class PaymentAdapterRegistry {
@@ -22,6 +27,11 @@ class PaymentAdapterRegistry {
       supportsRefund: adapter.supportsRefund,
       supportsStoreCredit: adapter.supportsStoreCredit,
       adapter,
+      setupNote: adapter.setupNote,
+      setupGuideUrl: adapter.setupGuideUrl,
+      contactEmail: adapter.contactEmail,
+      isPartnerApp: adapter.isPartnerApp,
+      integrationTypes: adapter.integrationTypes,
     });
   }
 

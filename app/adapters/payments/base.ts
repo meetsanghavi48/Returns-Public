@@ -51,6 +51,11 @@ export abstract class PaymentAdapter {
   abstract readonly credentialFields: CredentialField[];
   abstract readonly supportsRefund: boolean;
   abstract readonly supportsStoreCredit: boolean;
+  readonly setupNote?: string;
+  readonly setupGuideUrl?: string;
+  readonly contactEmail?: string;
+  readonly isPartnerApp?: boolean;
+  readonly integrationTypes?: string[];
 
   abstract processRefund(params: RefundParams, credentials: Record<string, string>): Promise<RefundResult>;
   abstract issueStoreCredit?(params: StoreCreditParams, credentials: Record<string, string>): Promise<StoreCreditResult>;

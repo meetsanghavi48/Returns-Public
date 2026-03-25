@@ -1,19 +1,19 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { useLoaderData, useActionData, useSubmit, useNavigation } from "@remix-run/react";
-import { requireAdminAuth } from "~/services/admin-session.server";
-import prisma from "~/db.server";
-import RuleBuilder from "~/components/RuleBuilder";
+import { requireAdminAuth } from "../services/admin-session.server";
+import prisma from "../db.server";
+import RuleBuilder from "../components/RuleBuilder";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
-  const { shop, accessToken } = await requireAdminAuth(request);
+  const { shop } = await requireAdminAuth(request);
   const rule = await prisma.automationRule.findFirst({ where: { id: params.id, shop } });
   if (!rule) throw new Response("Rule not found", { status: 404 });
   return json({ rule });
 };
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
-  const { shop, accessToken } = await requireAdminAuth(request);
+  const { shop } = await requireAdminAuth(request);
   const formData = await request.formData();
   const name = formData.get("name") as string;
   const description = formData.get("description") as string;

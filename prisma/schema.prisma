@@ -89,6 +89,10 @@ model ReturnRequest {
   utrNumber           String?
   // Auto-action tracking
   autoAction          String?
+  // Additional fields
+  customerPhone       String?
+  searchIndex         String?
+  exportedAt          DateTime?
   // Timestamps
   submittedAt         DateTime  @default(now())
   approvedAt          DateTime?
@@ -291,4 +295,105 @@ model AutomationLog {
   actionsRun    Json     @default("[]")
   error         String?
   createdAt     DateTime @default(now())
+}
+
+// Warehouse/store locations for return shipments
+model Location {
+  id              String   @id @default(cuid())
+  shop            String
+  name            String
+  addressLine1    String
+  addressLine2    String?
+  city            String
+  state           String?
+  country         String   @default("India")
+  pincode         String
+  phone           String?
+  longitude       Float?
+  latitude        Float?
+  locationId      String?
+  facilityCode    String?
+  locationType    String   @default("Warehouse")
+  isDefault       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([shop])
+}
+
+// Multi-language support for customer portal
+model Language {
+  id          String   @id @default(cuid())
+  shop        String
+  locale      String
+  name        String
+  isPublished Boolean  @default(false)
+  isDefault   Boolean  @default(false)
+  translations Json    @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@unique([shop, locale])
+}
+
+// Per-shop billing and usage tracking
+model BillingUsage {
+  id                String   @id @default(cuid())
+  shop              String   @unique
+  plan              String   @default("starter")
+  requestsUsed      Int      @default(0)
+  requestsLimit     Int      @default(100)
+  logisticsUsed     Int      @default(0)
+  logisticsLimit    Int      @default(1)
+  usersUsed         Int      @default(1)
+  usersLimit        Int      @default(1)
+  billingCycleStart DateTime @default(now())
+  billingCycleEnd   DateTime
+  additionalCredits Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// App users with role-based access
+model AppUser {
+  id             String   @id @default(cuid())
+  shop           String
+  email          String
+  name           String?
+  phone          String?
+  designation    String?
+  role           String   @default("viewer")
+  isActive       Boolean  @default(true)
+  permissions    Json     @default("{}")
+  locations      String[] @default([])
+  inviteToken    String?
+  inviteAccepted Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  @@unique([shop, email])
+}
+
+// Email notification templates per shop
+model EmailNotification {
+  id          String   @id @default(cuid())
+  shop        String
+  eventKey    String
+  isEnabled   Boolean  @default(true)
+  subject     String
+  htmlBody    String
+  senderName  String?
+  senderEmail String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@unique([shop, eventKey])
+}
+
+// Email send log
+model EmailLog {
+  id           String   @id @default(cuid())
+  shop         String
+  eventKey     String
+  toEmail      String
+  subject      String
+  status       String   @default("sent")
+  sentAt       DateTime @default(now())
+  returnId     String?
 }
