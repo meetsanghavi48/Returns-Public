@@ -209,14 +209,14 @@ export default function AdminLogistics() {
   const [regionFilter, setRegionFilter] = useState("all");
 
   const allAdapters = available as AdapterInfo[];
-  const regions = [...new Set(allAdapters.map((a) => a.region))].sort();
+  const regions = [...new Set(allAdapters.map((a) => a.region))].sort((a, b) => regionLabel(a).localeCompare(regionLabel(b)));
   const connectedCount = (connected as ConnectedConfig[]).length;
 
   const filtered = allAdapters.filter((a) => {
     if (regionFilter !== "all" && a.region !== regionFilter) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      return a.displayName.toLowerCase().includes(q) || a.key.toLowerCase().includes(q) || a.region.toLowerCase().includes(q);
+      return a.displayName.toLowerCase().includes(q) || a.key.toLowerCase().includes(q) || regionLabel(a.region).toLowerCase().includes(q);
     }
     return true;
   });
@@ -255,7 +255,7 @@ export default function AdminLogistics() {
           onChange={(e) => setRegionFilter(e.target.value)}
         >
           <option value="all">All Regions</option>
-          {regions.map((r) => <option key={r} value={r}>{r}</option>)}
+          {regions.map((r) => <option key={r} value={r}>{regionLabel(r)}</option>)}
         </select>
         <span style={{ fontSize: 13, color: "var(--admin-text-muted)", whiteSpace: "nowrap" }}>
           {filtered.length} result{filtered.length !== 1 ? "s" : ""}
@@ -282,7 +282,7 @@ export default function AdminLogistics() {
                     <ProviderLogo adapterKey={adapter.key} name={adapter.displayName} />
                     <div>
                       <strong style={{ fontSize: 14 }}>{adapter.displayName}</strong>
-                      <div style={{ fontSize: 12, color: "var(--admin-text-muted)" }}>{adapter.region}</div>
+                      <div style={{ fontSize: 12, color: "var(--admin-text-muted)" }}>{regionLabel(adapter.region)}</div>
                     </div>
                   </div>
                   <span className={`admin-badge ${isConnected ? "delivered" : "archived"}`}>
@@ -391,6 +391,18 @@ export default function AdminLogistics() {
       )}
     </>
   );
+}
+
+// Region code → full name mapping
+const REGION_LABELS: Record<string, string> = {
+  IN: "India", india: "India", US: "United States", UK: "United Kingdom",
+  GB: "United Kingdom", CA: "Canada", AU: "Australia", NL: "Netherlands",
+  ES: "Spain", DE: "Germany", EU: "Europe", GCC: "Middle East (GCC)",
+  IL: "Israel", RO: "Romania", SEA: "Southeast Asia", global: "Global",
+};
+
+function regionLabel(code: string): string {
+  return REGION_LABELS[code] || code;
 }
 
 // Domain mapping for provider logos
