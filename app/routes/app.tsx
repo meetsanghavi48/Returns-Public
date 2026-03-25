@@ -97,13 +97,6 @@ export default function App() {
                 Settings
               </NavLink>
               <NavLink
-                to="/app/settings/automation"
-                className={({ isActive }) => `admin-nav-item ${isActive ? "active" : ""}`}
-              >
-                <span className="admin-nav-icon">{"\u26A1"}</span>
-                Automation
-              </NavLink>
-              <NavLink
                 to="/app/audit"
                 className={({ isActive }) => `admin-nav-item ${isActive ? "active" : ""}`}
               >

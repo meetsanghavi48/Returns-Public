@@ -1,6 +1,8 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Outlet, NavLink, useLoaderData } from "@remix-run/react";
+import { AppProvider } from "@shopify/polaris";
+import enTranslations from "@shopify/polaris/locales/en.json";
 import { requireAdminAuth } from "../services/admin-session.server";
 import prisma from "../db.server";
 import adminStyles from "../styles/admin.css?url";
@@ -24,6 +26,7 @@ export default function AdminLayout() {
   const { shop, pendingCount } = useLoaderData<typeof loader>();
 
   return (
+    <AppProvider i18n={enTranslations}>
     <div className="admin-shell">
       <aside className="admin-sidebar">
         <div className="admin-sidebar-logo">
@@ -67,13 +70,6 @@ export default function AdminLayout() {
               Settings
             </NavLink>
             <NavLink
-              to="/admin/settings/automation"
-              className={({ isActive }) => `admin-nav-item ${isActive ? "active" : ""}`}
-            >
-              <span className="admin-nav-icon">{"\u26A1"}</span>
-              Automation
-            </NavLink>
-            <NavLink
               to="/admin/audit"
               className={({ isActive }) => `admin-nav-item ${isActive ? "active" : ""}`}
             >
@@ -95,5 +91,6 @@ export default function AdminLayout() {
         <Outlet />
       </main>
     </div>
+    </AppProvider>
   );
 }
