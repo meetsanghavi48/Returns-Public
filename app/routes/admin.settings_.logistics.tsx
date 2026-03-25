@@ -391,14 +391,15 @@ function LogisticsProviderList({ adapters, connected, showToast }: LogisticsProv
                   <BlockStack gap="300">
                     <InlineStack align="space-between" blockAlign="start">
                       <InlineStack gap="200" blockAlign="center">
-                        <img
-                          src={adapter.logoUrl}
-                          alt={adapter.displayName}
-                          width={24}
-                          height={24}
-                          style={{ borderRadius: 4 }}
-                          loading="lazy"
-                        />
+                        <div style={{
+                          width: 28, height: 28, borderRadius: 6,
+                          background: `hsl(${adapter.displayName.charCodeAt(0) * 7 % 360}, 55%, 50%)`,
+                          color: "#fff", fontSize: 13, fontWeight: 700,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          flexShrink: 0,
+                        }}>
+                          {adapter.displayName.charAt(0).toUpperCase()}
+                        </div>
                         <Text as="h3" variant="headingMd">
                           {adapter.displayName}
                         </Text>

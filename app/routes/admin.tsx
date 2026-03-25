@@ -4,9 +4,11 @@ import { Outlet, NavLink, useLoaderData } from "@remix-run/react";
 import { requireAdminAuth } from "../services/admin-session.server";
 import prisma from "../db.server";
 import adminStyles from "../styles/admin.css?url";
+import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import type { LinksFunction } from "@remix-run/node";
 
 export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: polarisStyles },
   { rel: "stylesheet", href: adminStyles },
 ];
 
