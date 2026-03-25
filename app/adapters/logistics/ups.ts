@@ -89,28 +89,32 @@ export class UPSAdapter extends LogisticsAdapter {
 
   readonly credentialFields: CredentialField[] = [
     {
+      key: "account_number",
+      label: "Account Number",
+      type: "text",
+      required: true,
+      placeholder: "Enter your account number",
+    },
+    {
       key: "client_id",
       label: "Client ID",
       type: "password",
       required: true,
-      placeholder: "Enter your UPS Client ID",
-      helpText: "Found in UPS Developer Portal under App credentials",
+      placeholder: "Enter your client ID",
     },
     {
       key: "client_secret",
       label: "Client Secret",
       type: "password",
       required: true,
-      placeholder: "Enter your UPS Client Secret",
-      helpText: "Found in UPS Developer Portal under App credentials",
+      placeholder: "Enter your client secret",
     },
     {
-      key: "account_number",
-      label: "Account Number",
-      type: "text",
+      key: "weight_unit",
+      label: "Weight Unit",
+      type: "select",
       required: true,
-      placeholder: "Enter your UPS account number",
-      helpText: "Your 6-digit UPS shipper number",
+      options: [{ label: "LBS", value: "LBS" }, { label: "KGS", value: "KGS" }, { label: "OZS", value: "OZS" }],
     },
   ];
 

@@ -88,7 +88,34 @@ export class ShippoAdapter extends LogisticsAdapter {
       type: "password",
       required: true,
       placeholder: "Enter your Shippo API token",
-      helpText: "Found in Shippo dashboard under Settings > API",
+    },
+    {
+      key: "package_length",
+      label: "Package Length (in)",
+      type: "number",
+      required: true,
+      placeholder: "Enter length in inches",
+    },
+    {
+      key: "package_width",
+      label: "Package Width (in)",
+      type: "number",
+      required: true,
+      placeholder: "Enter width in inches",
+    },
+    {
+      key: "package_height",
+      label: "Package Height (in)",
+      type: "number",
+      required: true,
+      placeholder: "Enter height in inches",
+    },
+    {
+      key: "package_weight",
+      label: "Package Weight (oz)",
+      type: "number",
+      required: true,
+      placeholder: "Enter weight in ounces",
     },
   ];
 

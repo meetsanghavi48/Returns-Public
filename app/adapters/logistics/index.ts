@@ -61,6 +61,29 @@ import { GLSAdapter } from "./gls";
 import { CargusAdapter } from "./cargus";
 import { EnviaAdapter } from "./envia";
 
+// Tier 5 — Return Prime discovered stubs
+import { HFDAdapter } from "./hfd";
+import { ShipmondoAdapter } from "./shipmondo";
+import { DepoterAdapter } from "./depoter";
+import { EShipperAdapter } from "./eshipper";
+import { ParceliticsAdapter } from "./parcelitics";
+import { EkartLiteAdapter } from "./ekart_lite";
+import { VamashipAdapter } from "./vamaship";
+import { KwikshipAdapter } from "./kwikship";
+import { ShipcluesAdapter } from "./shipclues";
+import { QuickshiftAdapter } from "./quickshift";
+import { FulfillmentToolsAdapter } from "./fulfillment_tools";
+import { ShipMozoAdapter } from "./shipmozo";
+import { ShadowfaxV2Adapter } from "./shadowfax_v2";
+import { ShippigoAdapter } from "./shippigo";
+import { BoxNowAdapter } from "./boxnow";
+import { CitilinkAdapter } from "./citilink";
+import { Go2StreamAdapter } from "./go2stream";
+import { DelhiveryQCV3Adapter } from "./delhivery_qc_v3";
+import { VelocityAdapter } from "./velocity";
+import { VelocityV2Adapter } from "./velocityv2";
+import { OmuniLogisticsAdapter } from "./omuni_logistics";
+
 // Register all logistics adapters
 // Indian
 logisticsRegistry.register(new DelhiveryAdapter());
@@ -122,6 +145,29 @@ logisticsRegistry.register(new DPDGermanyAdapter());
 logisticsRegistry.register(new GLSAdapter());
 logisticsRegistry.register(new CargusAdapter());
 logisticsRegistry.register(new EnviaAdapter());
+
+// Return Prime discovered stubs
+logisticsRegistry.register(new HFDAdapter());
+logisticsRegistry.register(new ShipmondoAdapter());
+logisticsRegistry.register(new DepoterAdapter());
+logisticsRegistry.register(new EShipperAdapter());
+logisticsRegistry.register(new ParceliticsAdapter());
+logisticsRegistry.register(new EkartLiteAdapter());
+logisticsRegistry.register(new VamashipAdapter());
+logisticsRegistry.register(new KwikshipAdapter());
+logisticsRegistry.register(new ShipcluesAdapter());
+logisticsRegistry.register(new QuickshiftAdapter());
+logisticsRegistry.register(new FulfillmentToolsAdapter());
+logisticsRegistry.register(new ShipMozoAdapter());
+logisticsRegistry.register(new ShadowfaxV2Adapter());
+logisticsRegistry.register(new ShippigoAdapter());
+logisticsRegistry.register(new BoxNowAdapter());
+logisticsRegistry.register(new CitilinkAdapter());
+logisticsRegistry.register(new Go2StreamAdapter());
+logisticsRegistry.register(new DelhiveryQCV3Adapter());
+logisticsRegistry.register(new VelocityAdapter());
+logisticsRegistry.register(new VelocityV2Adapter());
+logisticsRegistry.register(new OmuniLogisticsAdapter());
 
 // Re-export for convenience
 export { logisticsRegistry } from "./registry";

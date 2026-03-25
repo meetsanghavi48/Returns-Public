@@ -84,11 +84,17 @@ export class CanadaPostAdapter extends LogisticsAdapter {
   readonly credentialFields: CredentialField[] = [
     {
       key: "apiKey",
-      label: "API Key",
+      label: "API Key Username",
       type: "password",
       required: true,
-      placeholder: "Enter your Canada Post API key",
-      helpText: "Your Canada Post REST API key (used as both username and password)",
+      placeholder: "Enter your API key username",
+    },
+    {
+      key: "apiKeyPassword",
+      label: "API Key Password",
+      type: "password",
+      required: true,
+      placeholder: "Enter your API key password",
     },
     {
       key: "customerNumber",
@@ -96,15 +102,6 @@ export class CanadaPostAdapter extends LogisticsAdapter {
       type: "text",
       required: true,
       placeholder: "Enter your customer number",
-      helpText: "Your Canada Post customer number",
-    },
-    {
-      key: "contractId",
-      label: "Contract ID",
-      type: "text",
-      required: true,
-      placeholder: "Enter your contract ID",
-      helpText: "Your Canada Post contract ID for commercial shipping",
     },
   ];
 

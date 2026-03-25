@@ -13,9 +13,20 @@ export class CargusAdapter extends LogisticsAdapter {
   readonly region = "RO";
   readonly logoUrl = "https://www.google.com/s2/favicons?domain=cargus.ro&sz=64";
   readonly credentialFields: CredentialField[] = [
-    { key: "username", label: "Username", type: "text", required: true, placeholder: "Enter your Cargus username" },
-    { key: "password", label: "Password", type: "password", required: true, placeholder: "Enter your Cargus password" },
-    { key: "client_id", label: "Client ID", type: "text", required: true, placeholder: "Enter your client ID" },
+    { key: "username", label: "Web Express Account Username", type: "text", required: true, placeholder: "Enter your username" },
+    { key: "password", label: "Password", type: "password", required: true, placeholder: "Enter your password" },
+    { key: "primary_key", label: "Primary Key", type: "password", required: true, placeholder: "Enter your primary key" },
+    { key: "service", label: "Service", type: "select", required: true,
+      options: [
+        { label: "Economic Standard", value: "economic_standard" },
+        { label: "Standard", value: "standard" },
+        { label: "Matinal", value: "matinal" },
+        { label: "International rutier", value: "international_rutier" },
+        { label: "International aerian", value: "international_aerian" },
+      ] },
+    { key: "package_length", label: "Package Length (cm)", type: "number", required: true, placeholder: "Enter length" },
+    { key: "package_width", label: "Package Width (cm)", type: "number", required: true, placeholder: "Enter width" },
+    { key: "package_height", label: "Package Height (cm)", type: "number", required: true, placeholder: "Enter height" },
   ];
 
   async createPickup(_params: PickupParams, _credentials: Record<string, string>): Promise<PickupResult> {
