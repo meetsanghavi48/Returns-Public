@@ -164,7 +164,7 @@ export default function SettingsPayments() {
   }, []);
 
   return (
-    <Frame>
+    
       <Page
         backAction={{ content: "Settings", url: "/app/settings" }}
         title="Payments"
@@ -179,7 +179,7 @@ export default function SettingsPayments() {
           <Toast content={toastMessage} error={toastError} onDismiss={dismissToast} duration={4000} />
         )}
       </Page>
-    </Frame>
+    
   );
 }
 

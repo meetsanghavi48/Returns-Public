@@ -3,7 +3,7 @@ import { json } from "@remix-run/node";
 import { useLoaderData, useFetcher, useNavigate } from "@remix-run/react";
 import {
   Page, Card, Badge, Button, BlockStack, InlineStack, Text, Layout,
-  Banner, Frame, Toast, EmptyState,
+  Banner,  Toast, EmptyState,
 } from "@shopify/polaris";
 import { useState, useCallback } from "react";
 import { authenticate } from "~/shopify.server";
@@ -64,7 +64,7 @@ export default function SettingsAutomation() {
   const activeCount = (rules as any[]).filter((r) => r.isActive).length;
 
   return (
-    <Frame>
+    
       <Page
         backAction={{ content: "Settings", url: "/app/settings" }}
         title="Automations"
@@ -119,7 +119,7 @@ export default function SettingsAutomation() {
 
         {toastMsg && <Toast content={toastMsg} onDismiss={() => setToastMsg("")} duration={3000} />}
       </Page>
-    </Frame>
+    
   );
 }
 

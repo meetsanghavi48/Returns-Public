@@ -216,7 +216,7 @@ export default function SettingsLogistics() {
   }, []);
 
   return (
-    <Frame>
+    
       <Page
         backAction={{ content: "Settings", url: "/app/settings" }}
         title="Logistics"
@@ -236,7 +236,7 @@ export default function SettingsLogistics() {
           />
         )}
       </Page>
-    </Frame>
+    
   );
 }
 

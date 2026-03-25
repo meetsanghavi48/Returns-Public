@@ -208,7 +208,7 @@ export default function SettingsIntegrations() {
   }, []);
 
   return (
-    <Frame>
+    
       <Page
         backAction={{ content: "Settings", url: "/app/settings" }}
         title="Integrations"
@@ -233,7 +233,7 @@ export default function SettingsIntegrations() {
           <Toast content={toastMessage} error={toastError} onDismiss={dismissToast} duration={4000} />
         )}
       </Page>
-    </Frame>
+    
   );
 }
 

@@ -2,7 +2,7 @@ import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import {
-  Page, Card, DataTable, Badge, BlockStack, Text, Frame, Select, InlineStack,
+  Page, Card, DataTable, Badge, BlockStack, Text,  Select, InlineStack,
 } from "@shopify/polaris";
 import { useState, useMemo } from "react";
 import { authenticate } from "~/shopify.server";
@@ -53,7 +53,7 @@ export default function AutomationLogs() {
   });
 
   return (
-    <Frame>
+    
       <Page
         backAction={{ content: "Automations", url: "/app/settings/automation" }}
         title="Automation Logs"
@@ -93,6 +93,6 @@ export default function AutomationLogs() {
           </Card>
         </BlockStack>
       </Page>
-    </Frame>
+    
   );
 }
