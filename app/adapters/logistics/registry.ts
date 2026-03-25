@@ -1,4 +1,4 @@
-import type { LogisticsAdapter, CredentialField } from "./base";
+import type { LogisticsAdapter, CredentialField, AdapterMeta } from "./base";
 
 export interface AdapterEntry {
   key: string;
@@ -6,6 +6,7 @@ export interface AdapterEntry {
   region: string;
   logoUrl: string;
   credentialFields: CredentialField[];
+  meta: AdapterMeta;
   adapter: LogisticsAdapter;
 }
 
@@ -19,6 +20,7 @@ class LogisticsAdapterRegistry {
       region: adapter.region,
       logoUrl: adapter.logoUrl,
       credentialFields: adapter.credentialFields,
+      meta: adapter.meta,
       adapter,
     });
   }

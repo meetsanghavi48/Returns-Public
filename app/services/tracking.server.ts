@@ -1,6 +1,7 @@
 import prisma from "~/db.server";
 import { logisticsRegistry } from "~/adapters/logistics/registry";
 import { decrypt } from "~/utils/encryption.server";
+import { runAutomationsForReturn } from "./automation.server";
 
 export async function refreshTrackingForReturn(returnId: string) {
   const returnReq = await prisma.returnRequest.findUnique({
@@ -45,6 +46,14 @@ export async function refreshTrackingForReturn(returnId: string) {
           metadata: { events: result.events.slice(0, 5) } as any,
         },
       });
+
+      // Run automation rules on tracking update
+      const shopRecord = await prisma.shop.findUnique({ where: { shop: returnReq.shop } });
+      if (shopRecord) {
+        runAutomationsForReturn(returnId, returnReq.shop, shopRecord.accessToken, "tracking_updated").catch((e) =>
+          console.error("[Automation] tracking_updated trigger error:", e.message),
+        );
+      }
     }
 
     return { ...result, statusChanged };

@@ -6,6 +6,7 @@ import {
   type TrackingResult,
   type ServiceabilityResult,
   type CredentialField,
+  type AdapterMeta,
 } from "./base";
 
 const TRACKING_BASE = "https://track.delhivery.com";
@@ -49,6 +50,10 @@ export class DelhiveryAdapter extends LogisticsAdapter {
   readonly displayName = "Delhivery";
   readonly region = "india";
   readonly logoUrl = "/images/logistics/delhivery.png";
+  readonly meta: AdapterMeta = {
+    qcSupport: false,
+    setupGuideUrl: "https://www.delhivery.com/developers",
+  };
 
   readonly credentialFields: CredentialField[] = [
     {
@@ -109,6 +114,45 @@ export class DelhiveryAdapter extends LogisticsAdapter {
       type: "text",
       required: true,
       placeholder: "10-digit phone number",
+    },
+    {
+      key: "return_address_method",
+      label: "Return Address Method",
+      type: "select",
+      required: true,
+      options: [
+        { label: "Use Delhivery warehouse address", value: "Use Delhivery warehouse address" },
+        { label: "Use my store address", value: "Use my store address" },
+        { label: "Enter custom address", value: "Enter custom address" },
+      ],
+    },
+    {
+      key: "length",
+      label: "Default Length (cm)",
+      type: "number",
+      required: false,
+      placeholder: "30",
+    },
+    {
+      key: "breadth",
+      label: "Default Breadth (cm)",
+      type: "number",
+      required: false,
+      placeholder: "25",
+    },
+    {
+      key: "height",
+      label: "Default Height (cm)",
+      type: "number",
+      required: false,
+      placeholder: "10",
+    },
+    {
+      key: "weight",
+      label: "Default Weight (kg)",
+      type: "number",
+      required: false,
+      placeholder: "0.5",
     },
   ];
 

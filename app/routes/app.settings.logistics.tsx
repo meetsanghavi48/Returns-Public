@@ -8,6 +8,7 @@ import {
   FormLayout,
   TextField,
   Select,
+  ChoiceList,
   Checkbox,
   Button,
   Badge,
@@ -18,6 +19,7 @@ import {
   Grid,
   Frame,
   Toast,
+  Link,
 } from "@shopify/polaris";
 import { useState, useCallback, useEffect } from "react";
 
@@ -30,11 +32,17 @@ import { encrypt } from "~/utils/encryption.server";
 interface CredentialFieldDef {
   key: string;
   label: string;
-  type: "text" | "password" | "email" | "url" | "select";
+  type: "text" | "password" | "email" | "url" | "select" | "number" | "multiselect";
   required: boolean;
   placeholder?: string;
   helpText?: string;
   options?: Array<{ label: string; value: string }>;
+}
+
+interface AdapterMeta {
+  qcSupport?: boolean;
+  contactEmail?: string;
+  setupGuideUrl?: string;
 }
 
 interface AdapterInfo {
@@ -43,6 +51,7 @@ interface AdapterInfo {
   region: string;
   logoUrl: string;
   credentialFields: CredentialFieldDef[];
+  meta: AdapterMeta;
 }
 
 interface ConnectedConfig {
@@ -74,6 +83,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     region: a.region,
     logoUrl: a.logoUrl,
     credentialFields: a.credentialFields,
+    meta: a.meta,
   }));
 
   return json({ available, connected: logisticsConfigs as ConnectedConfig[] });
@@ -457,6 +467,15 @@ function LogisticsProviderList({ adapters, connected, showToast }: LogisticsProv
                 </Banner>
               )}
 
+              {selectedAdapter.meta?.setupGuideUrl && (
+                <InlineStack gap="100">
+                  <Text as="span" variant="bodySm" tone="subdued">Need help?</Text>
+                  <Link url={selectedAdapter.meta.setupGuideUrl} target="_blank">
+                    Click here for setup guide
+                  </Link>
+                </InlineStack>
+              )}
+
               <FormLayout>
                 {selectedAdapter.credentialFields.map((field) => {
                   if (field.type === "select" && field.options) {
@@ -464,10 +483,45 @@ function LogisticsProviderList({ adapters, connected, showToast }: LogisticsProv
                       <Select
                         key={field.key}
                         label={field.label}
-                        options={field.options}
+                        options={[
+                          { label: "Select...", value: "" },
+                          ...field.options,
+                        ]}
                         value={credentialValues[field.key] || ""}
                         onChange={(val) => updateCredential(field.key, val)}
                         helpText={field.helpText}
+                        requiredIndicator={field.required}
+                      />
+                    );
+                  }
+
+                  if (field.type === "multiselect" && field.options) {
+                    const selected = credentialValues[field.key]
+                      ? credentialValues[field.key].split(",")
+                      : [];
+                    return (
+                      <ChoiceList
+                        key={field.key}
+                        title={field.label}
+                        allowMultiple
+                        choices={field.options.map((o) => ({ label: o.label, value: o.value }))}
+                        selected={selected}
+                        onChange={(val) => updateCredential(field.key, val.join(","))}
+                      />
+                    );
+                  }
+
+                  if (field.type === "number") {
+                    return (
+                      <TextField
+                        key={field.key}
+                        label={field.label}
+                        type="number"
+                        value={credentialValues[field.key] || ""}
+                        onChange={(val) => updateCredential(field.key, val)}
+                        placeholder={field.placeholder}
+                        helpText={field.helpText}
+                        autoComplete="off"
                         requiredIndicator={field.required}
                       />
                     );
@@ -477,7 +531,7 @@ function LogisticsProviderList({ adapters, connected, showToast }: LogisticsProv
                     <TextField
                       key={field.key}
                       label={field.label}
-                      type={field.type === "password" ? "password" : "text"}
+                      type={field.type === "password" ? "password" : field.type === "email" ? "email" : "text"}
                       value={credentialValues[field.key] || ""}
                       onChange={(val) => updateCredential(field.key, val)}
                       placeholder={field.placeholder}

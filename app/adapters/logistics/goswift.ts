@@ -8,23 +8,22 @@ import {
   type CredentialField,
 } from "./base";
 
-const API_BASE = "https://api.shadowfax.in";
+const API_BASE = "https://app.goswift.in/api";
 
-async function shadowfaxFetch(
+async function goswiftFetch(
   apiKey: string,
   method: string,
   urlPath: string,
   body?: unknown,
 ): Promise<any> {
-  const url = API_BASE + urlPath;
+  const url = `${API_BASE}${urlPath}`;
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-    Authorization: `Token ${apiKey}`,
+    Authorization: `Bearer ${apiKey}`,
   };
   const opts: RequestInit = { method, headers };
 
   if (body) {
+    headers["Content-Type"] = "application/json";
     opts.body = JSON.stringify(body);
   }
 
@@ -37,11 +36,11 @@ async function shadowfaxFetch(
   }
 }
 
-export class ShadowfaxAdapter extends LogisticsAdapter {
-  readonly key = "shadowfax";
-  readonly displayName = "Shadowfax";
+export class GoswiftAdapter extends LogisticsAdapter {
+  readonly key = "goswift";
+  readonly displayName = "Goswift";
   readonly region = "IN";
-  readonly logoUrl = "/logos/shadowfax.png";
+  readonly logoUrl = "/logos/goswift.png";
 
   readonly credentialFields: CredentialField[] = [
     {
@@ -49,16 +48,8 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
       label: "API Key",
       type: "password",
       required: true,
-      placeholder: "Your Shadowfax API Key",
-      helpText: "API key provided during Shadowfax onboarding",
-    },
-    {
-      key: "client_code",
-      label: "Client Code",
-      type: "text",
-      required: true,
-      placeholder: "Your Shadowfax Client Code",
-      helpText: "Client code assigned by Shadowfax",
+      placeholder: "Your Goswift API key",
+      helpText: "Found in Goswift dashboard under Settings > API",
     },
   ];
 
@@ -66,7 +57,7 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
     params: PickupParams,
     credentials: Record<string, string>,
   ): Promise<PickupResult> {
-    const { api_key, client_code } = credentials;
+    const { api_key } = credentials;
 
     const totalAmount = params.items.reduce(
       (sum, i) => sum + i.price * i.quantity,
@@ -79,9 +70,10 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
         .slice(0, 200) || "Return Shipment";
 
     const payload = {
-      client_code,
-      order_id: `${params.orderNumber}_${params.returnId}`,
       order_type: "reverse",
+      reference_id: `${params.orderNumber}_${params.returnId}`,
+      payment_mode: params.paymentMode === "cod" ? "COD" : "PREPAID",
+      total_amount: totalAmount,
       pickup_details: {
         name: params.senderName.slice(0, 50) || "Customer",
         phone: params.senderPhone.replace(/[^0-9]/g, "").slice(-10),
@@ -91,7 +83,7 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
         pincode: params.senderPincode,
         country: params.senderCountry || "India",
       },
-      drop_details: {
+      delivery_details: {
         name: params.receiverName.slice(0, 50) || "Warehouse",
         phone: params.receiverPhone.replace(/[^0-9]/g, "").slice(-10),
         address: params.receiverAddress.slice(0, 200),
@@ -101,16 +93,12 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
         country: params.receiverCountry || "India",
       },
       package_details: {
-        weight: Math.max(params.weight / 1000, 0.5),
+        weight: params.weight, // grams
         length: params.length || 30,
         breadth: params.breadth || 25,
         height: params.height || 10,
         description: productsDesc,
-        quantity: params.items.reduce((sum, i) => sum + i.quantity, 0) || 1,
-        invoice_value: totalAmount,
       },
-      payment_mode: params.paymentMode === "cod" ? "COD" : "PREPAID",
-      cod_amount: params.paymentMode === "cod" ? totalAmount : 0,
       items: params.items.map((item) => ({
         name: item.name,
         sku: item.sku,
@@ -120,44 +108,45 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
     };
 
     try {
-      const data = await shadowfaxFetch(
+      const data = await goswiftFetch(
         api_key,
         "POST",
-        "/api/v2/orders/",
+        "/v2/orders",
         payload,
       );
 
       const awb =
-        data?.awb_number ||
-        data?.tracking_id ||
         data?.data?.awb_number ||
-        data?.data?.tracking_id ||
-        data?.order_id;
+        data?.data?.tracking_number ||
+        data?.awb_number;
+      const orderId = data?.data?.order_id || data?.order_id;
 
-      if (awb) {
+      if (awb || orderId) {
         return {
           success: true,
-          awb: String(awb),
-          trackingUrl: `https://tracker.shadowfax.in/#/track/${awb}`,
+          awb: awb || orderId,
+          trackingUrl: data?.data?.tracking_url || undefined,
+          labelUrl: data?.data?.label_url || undefined,
+          estimatedPickup: data?.data?.estimated_pickup || undefined,
           rawResponse: data,
         };
       }
 
       const errMsg =
-        data?.error ||
         data?.message ||
-        data?.detail ||
+        data?.error ||
+        data?.errors?.[0]?.message ||
         JSON.stringify(data).slice(0, 300);
 
       return {
         success: false,
-        error: errMsg || "Shadowfax did not return an AWB number",
+        error: errMsg || "Goswift did not return a tracking number",
         rawResponse: data,
       };
     } catch (err: any) {
       return {
         success: false,
-        error: err.message || "Failed to create Shadowfax pickup",
+        error: err.message || "Failed to create Goswift order",
       };
     }
   }
@@ -169,15 +158,13 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
     const { api_key } = credentials;
 
     try {
-      const data = await shadowfaxFetch(
+      const data = await goswiftFetch(
         api_key,
         "GET",
-        `/api/v2/orders/${encodeURIComponent(awb)}/status/`,
+        `/v2/orders/${encodeURIComponent(awb)}/tracking`,
       );
 
-      const trackingData = data?.data || data;
-
-      if (!trackingData || data?.error) {
+      if (!data?.data && !data?.tracking) {
         return {
           success: false,
           awb,
@@ -185,44 +172,43 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
           currentStatusCode: "",
           events: [],
           isDelivered: false,
-          error: data?.error || data?.message || "No tracking data found",
+          error: data?.message || "No tracking data found",
           rawResponse: data,
         };
       }
 
+      const trackingData = data?.data || data?.tracking || {};
       const scans: any[] =
-        trackingData?.status_history ||
-        trackingData?.tracking_history ||
         trackingData?.events ||
+        trackingData?.scans ||
+        trackingData?.tracking_history ||
         [];
-
       const events: TrackingEvent[] = scans.map((scan: any) => ({
-        timestamp: scan.timestamp || scan.created_at || scan.date || "",
-        status: scan.status || scan.activity || "",
-        statusCode: scan.status_code || scan.statusCode || "",
+        timestamp: scan.timestamp || scan.date || scan.created_at || "",
+        status: scan.status || scan.event || "",
+        statusCode: scan.status_code || scan.code || "",
         location: scan.location || scan.city || "",
-        description: scan.remark || scan.description || scan.status || "",
+        description: scan.description || scan.remarks || scan.status || "",
       }));
 
       const currentStatus =
         trackingData?.current_status ||
         trackingData?.status ||
+        events[0]?.status ||
         "In Transit";
       const currentStatusCode =
         trackingData?.current_status_code ||
         trackingData?.status_code ||
         "";
-      const statusStr = typeof currentStatus === "string" ? currentStatus : String(currentStatus);
       const isDelivered =
-        statusStr.toLowerCase().includes("delivered") ||
-        currentStatusCode === "DL" ||
-        currentStatusCode === "DELIVERED";
+        currentStatus.toLowerCase().includes("delivered") ||
+        currentStatusCode === "delivered";
 
       return {
         success: true,
         awb,
-        currentStatus: statusStr,
-        currentStatusCode: String(currentStatusCode),
+        currentStatus,
+        currentStatusCode,
         estimatedDelivery: trackingData?.estimated_delivery || undefined,
         events,
         isDelivered,
@@ -236,7 +222,7 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
         currentStatusCode: "",
         events: [],
         isDelivered: false,
-        error: err.message || "Failed to track Shadowfax shipment",
+        error: err.message || "Failed to track shipment",
       };
     }
   }
@@ -249,56 +235,34 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
     const { api_key } = credentials;
 
     try {
-      // Shadowfax may not have a dedicated serviceability endpoint; use orders API
-      // to check if the pincodes are served. Fall back to a pincode check endpoint.
-      const data = await shadowfaxFetch(
+      const payload = {
+        pickup_pincode: originPin,
+        delivery_pincode: destPin,
+        order_type: "reverse",
+      };
+
+      const data = await goswiftFetch(
         api_key,
-        "GET",
-        `/api/v2/serviceability/?origin_pincode=${encodeURIComponent(originPin)}&destination_pincode=${encodeURIComponent(destPin)}`,
+        "POST",
+        "/v2/serviceability/check",
+        payload,
       );
 
-      if (data?.error || data?.status === 404) {
-        // Try alternative endpoint format
-        const altData = await shadowfaxFetch(
-          api_key,
-          "GET",
-          `/api/v2/pincodes/serviceability/?pickup_pincode=${encodeURIComponent(originPin)}&drop_pincode=${encodeURIComponent(destPin)}`,
-        );
-
-        if (altData?.error && altData?.status === 404) {
-          return {
-            serviceable: false,
-            error: `Serviceability check not available for ${originPin} -> ${destPin}`,
-          };
-        }
-
-        const altResult = altData?.data || altData;
+      if (data?.error || data?.status === false) {
         return {
-          serviceable:
-            altResult?.serviceable === true ||
-            altResult?.is_serviceable === true,
-          estimatedDays: altResult?.estimated_days
-            ? parseInt(String(altResult.estimated_days), 10)
-            : undefined,
-          codAvailable: altResult?.cod_available === true,
+          serviceable: false,
+          error: data?.message || data?.error || "Serviceability check failed",
         };
       }
 
       const result = data?.data || data;
-
       const serviceable =
-        result?.serviceable === true ||
-        result?.is_serviceable === true;
-
+        result?.serviceable === true || result?.available === true;
       const estimatedDays = result?.estimated_days
-        ? parseInt(String(result.estimated_days), 10)
-        : result?.etd
-          ? parseInt(String(result.etd), 10)
-          : undefined;
-
+        ? parseInt(result.estimated_days, 10)
+        : undefined;
       const codAvailable =
-        result?.cod_available === true ||
-        result?.cod === true;
+        result?.cod_available === true || result?.cod === true;
 
       return {
         serviceable,
@@ -308,7 +272,7 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
     } catch (err: any) {
       return {
         serviceable: false,
-        error: err.message || "Failed to check Shadowfax serviceability",
+        error: err.message || "Failed to check serviceability",
       };
     }
   }
@@ -316,21 +280,19 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
   async validateCredentials(
     credentials: Record<string, string>,
   ): Promise<{ valid: boolean; error?: string }> {
-    const { api_key, client_code } = credentials;
+    const { api_key } = credentials;
 
     if (!api_key) {
-      return { valid: false, error: "API Key is required" };
-    }
-    if (!client_code) {
-      return { valid: false, error: "Client Code is required" };
+      return { valid: false, error: "API key is required" };
     }
 
     try {
-      // Test credentials with a lightweight API call
-      const data = await shadowfaxFetch(
+      // Use a lightweight serviceability check to validate the API key
+      const data = await goswiftFetch(
         api_key,
-        "GET",
-        `/api/v2/orders/TEST000000000/status/`,
+        "POST",
+        "/v2/serviceability/check",
+        { pickup_pincode: "110001", delivery_pincode: "400001", order_type: "reverse" },
       );
 
       if (data?.raw && typeof data.raw === "string") {
@@ -338,8 +300,8 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
         if (
           lower.includes("unauthorized") ||
           lower.includes("forbidden") ||
-          lower.includes("invalid token") ||
-          lower.includes("authentication")
+          lower.includes("invalid") ||
+          lower.includes("unauthenticated")
         ) {
           return { valid: false, error: "Invalid API key" };
         }
@@ -349,19 +311,23 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
         return { valid: false, error: "Invalid API key" };
       }
 
-      if (
-        data?.detail?.toLowerCase?.()?.includes?.("authentication") ||
-        data?.detail?.toLowerCase?.()?.includes?.("invalid")
-      ) {
-        return { valid: false, error: "Invalid API key" };
+      // Check for API-level auth errors
+      if (data?.error && typeof data.error === "string") {
+        const lower = data.error.toLowerCase();
+        if (
+          lower.includes("unauthorized") ||
+          lower.includes("invalid") ||
+          lower.includes("unauthenticated")
+        ) {
+          return { valid: false, error: "Invalid API key" };
+        }
       }
 
-      // Any other response (including order not found) means credentials are valid
       return { valid: true };
     } catch (err: any) {
       return {
         valid: false,
-        error: err.message || "Failed to validate Shadowfax credentials",
+        error: err.message || "Failed to validate credentials",
       };
     }
   }
@@ -373,39 +339,40 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
     const { api_key } = credentials;
 
     try {
-      const data = await shadowfaxFetch(
+      const data = await goswiftFetch(
         api_key,
         "POST",
-        `/api/v2/orders/${encodeURIComponent(awb)}/cancel/`,
-        {
-          reason: "Cancelled by merchant",
-        },
+        `/v2/orders/${encodeURIComponent(awb)}/cancel`,
       );
 
       if (
+        data?.data?.status === "cancelled" ||
         data?.success === true ||
-        data?.status === true ||
-        data?.message?.toLowerCase?.()?.includes?.("cancel")
+        data?.status === true
       ) {
         return { success: true };
       }
 
       if (data?.raw && typeof data.raw === "string") {
         const lower = data.raw.toLowerCase();
-        if (lower.includes("success") || lower.includes("cancelled") || lower.includes("canceled")) {
+        if (
+          lower.includes("success") ||
+          lower.includes("cancelled") ||
+          lower.includes("canceled")
+        ) {
           return { success: true };
         }
       }
 
-      // Some APIs return 200 with the order data on successful cancellation
-      if (data?.data?.status?.toLowerCase?.()?.includes?.("cancel")) {
+      // A response without error typically indicates success
+      if (data?.data && !data?.error) {
         return { success: true };
       }
 
       const errMsg =
-        data?.error ||
         data?.message ||
-        data?.detail ||
+        data?.error ||
+        data?.errors?.[0]?.message ||
         (typeof data?.raw === "string" ? data.raw.slice(0, 200) : undefined) ||
         "Cancellation response unclear";
 
@@ -413,7 +380,7 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
     } catch (err: any) {
       return {
         success: false,
-        error: err.message || "Failed to cancel Shadowfax pickup",
+        error: err.message || "Failed to cancel Goswift order",
       };
     }
   }

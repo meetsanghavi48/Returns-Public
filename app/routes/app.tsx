@@ -10,6 +10,7 @@ import {
   SettingsIcon,
   ChartVerticalIcon,
   AppsIcon,
+  AutomationIcon,
   ListBulletedIcon,
   PlusCircleIcon,
   ExitIcon,
@@ -97,11 +98,6 @@ export default function App() {
             label: "Analytics",
             icon: ChartVerticalIcon,
           },
-          {
-            url: "/app/integrations",
-            label: "Integrations",
-            icon: AppsIcon,
-          },
         ]}
       />
       <Navigation.Section
@@ -111,6 +107,11 @@ export default function App() {
             url: "/app/settings",
             label: "Settings",
             icon: SettingsIcon,
+          },
+          {
+            url: "/app/settings/automation",
+            label: "Automation",
+            icon: AutomationIcon,
           },
           {
             url: "/app/audit",

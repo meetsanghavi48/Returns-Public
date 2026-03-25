@@ -3,6 +3,7 @@ import { uid } from "./shopify.server";
 import { updateOrderTags } from "./shopify.server";
 import { auditLog } from "./audit.server";
 import { getSetting } from "./settings.server";
+import { runAutomationsForReturn } from "./automation.server";
 
 // Check if order items include a freebie that should be auto-added
 function checkFreebieItems(
@@ -222,6 +223,14 @@ export async function submitReturnRequest(
     await autoApproveRequest(shop, accessToken, reqId, data.orderId, requestType);
   }
 
+  // Run automation rules for the new return
+  const returnRecord = await prisma.returnRequest.findFirst({ where: { reqId, shop } });
+  if (returnRecord) {
+    runAutomationsForReturn(returnRecord.id, shop, accessToken, "return_created").catch((e) =>
+      console.error("[Automation] return_created trigger error:", e.message),
+    );
+  }
+
   return reqId;
 }
 
@@ -380,6 +389,11 @@ export async function approveRequest(
     "admin",
     "Manual approval",
   );
+
+  // Run automation rules on status change
+  runAutomationsForReturn(request.id, shop, accessToken, "status_changed").catch((e) =>
+    console.error("[Automation] status_changed trigger error:", e.message),
+  );
 }
 
 // Reject a pending request
@@ -411,6 +425,11 @@ export async function rejectRequest(
   );
 
   await applyPostActionPolicies(shop, accessToken, reqId, "rejected");
+
+  // Run automation rules on status change
+  runAutomationsForReturn(request.id, shop, accessToken, "status_changed").catch((e) =>
+    console.error("[Automation] status_changed trigger error:", e.message),
+  );
 }
 
 // Archive a completed request

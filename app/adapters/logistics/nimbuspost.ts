@@ -6,6 +6,7 @@ import {
   type TrackingEvent,
   type ServiceabilityResult,
   type CredentialField,
+  type AdapterMeta,
 } from "./base";
 
 const BASE_URL = "https://api.nimbuspost.com/v1";
@@ -15,22 +16,32 @@ export class NimbuspostAdapter extends LogisticsAdapter {
   readonly displayName = "Nimbuspost";
   readonly region = "india";
   readonly logoUrl = "/images/logos/nimbuspost.svg";
+  readonly meta: AdapterMeta = {
+    qcSupport: true,
+    setupGuideUrl: "https://documenter.getpostman.com/view/9692837/TW6wHnoz",
+  };
   readonly credentialFields: CredentialField[] = [
     {
       key: "email",
-      label: "Email",
+      label: "Account Login Email",
       type: "email",
       required: true,
-      placeholder: "you@company.com",
-      helpText: "The email address used for your Nimbuspost account",
+      placeholder: "Enter your account email id",
+      helpText: "Please enter the required credentials to activate Nimbus Post. Check our step-by-step guide to connect faster.",
     },
     {
       key: "password",
-      label: "Password",
+      label: "Account Login Password",
       type: "password",
       required: true,
-      placeholder: "Your Nimbuspost password",
-      helpText: "Your Nimbuspost account password",
+      placeholder: "Enter your account password",
+    },
+    {
+      key: "qc_enabled",
+      label: "Would you like to enable QC services?",
+      type: "select",
+      required: false,
+      options: [{ label: "No", value: "No" }, { label: "Yes", value: "Yes" }],
     },
   ];
 
@@ -90,7 +101,9 @@ export class NimbuspostAdapter extends LogisticsAdapter {
         // TODO: confirm if additional item-level fields are required
       }));
 
-      const body = {
+      const qcEnabled = credentials.qc_enabled === "Yes";
+
+      const body: Record<string, unknown> = {
         order_number: params.orderNumber,
         shipping_address: {
           name: params.receiverName,
@@ -112,11 +125,11 @@ export class NimbuspostAdapter extends LogisticsAdapter {
         },
         order_items: orderItems,
         payment_type: params.paymentMode === "cod" ? "cod" : "prepaid",
-        package_weight: params.weight / 1000, // API expects kg; PickupParams has grams
+        package_weight: params.weight / 1000,
         package_length: params.length ?? 10,
         package_breadth: params.breadth ?? 10,
         package_height: params.height ?? 10,
-        // TODO: confirm whether total_amount / sub_total field is needed
+        ...(qcEnabled ? { qc_enable: true } : {}),
       };
 
       const res = await fetch(`${BASE_URL}/shipments`, {

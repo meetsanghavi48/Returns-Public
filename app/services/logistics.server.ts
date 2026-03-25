@@ -45,6 +45,12 @@ export async function createPickupForReturn(returnId: string, shop: string): Pro
   const address = returnReq.address as Record<string, string> | null;
   const items = (returnReq.items as Array<Record<string, unknown>>) || [];
 
+  // Get package dimensions from stored config credentials if available
+  const cfgWeight = Number(logistics.credentials.weight) || 0;
+  const cfgLength = Number(logistics.credentials.length) || 0;
+  const cfgBreadth = Number(logistics.credentials.breadth) || 0;
+  const cfgHeight = Number(logistics.credentials.height) || 0;
+
   const params: PickupParams = {
     returnId,
     senderName: address?.name || returnReq.customerName || "Customer",
@@ -61,7 +67,10 @@ export async function createPickupForReturn(returnId: string, shop: string): Pro
     receiverState: shopRecord.warehouseState || "",
     receiverPincode: shopRecord.warehousePincode || "",
     receiverCountry: "India",
-    weight: 500,
+    weight: cfgWeight ? cfgWeight * 1000 : 500, // config stores kg, params expects grams
+    length: cfgLength || undefined,
+    breadth: cfgBreadth || undefined,
+    height: cfgHeight || undefined,
     items: items.map((item) => ({
       name: String(item.title || ""),
       sku: String(item.sku || ""),

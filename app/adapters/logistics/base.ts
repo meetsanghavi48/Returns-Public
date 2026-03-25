@@ -69,11 +69,17 @@ export interface ServiceabilityResult {
 export interface CredentialField {
   key: string;
   label: string;
-  type: "text" | "password" | "email" | "url" | "select";
+  type: "text" | "password" | "email" | "url" | "select" | "number" | "multiselect";
   required: boolean;
   placeholder?: string;
   helpText?: string;
   options?: Array<{ label: string; value: string }>;
+}
+
+export interface AdapterMeta {
+  qcSupport?: boolean;
+  contactEmail?: string;
+  setupGuideUrl?: string;
 }
 
 export abstract class LogisticsAdapter {
@@ -82,6 +88,7 @@ export abstract class LogisticsAdapter {
   abstract readonly region: string;
   abstract readonly logoUrl: string;
   abstract readonly credentialFields: CredentialField[];
+  readonly meta: AdapterMeta = {};
 
   abstract createPickup(params: PickupParams, credentials: Record<string, string>): Promise<PickupResult>;
   abstract trackShipment(awb: string, credentials: Record<string, string>): Promise<TrackingResult>;

@@ -29,7 +29,7 @@ import { FedExAdapter } from "./fedex";
 import { UPSAdapter } from "./ups";
 import { DHLAdapter } from "./dhl";
 
-// Tier 2 — Regional stubs
+// Tier 2 — Regional
 import { AustraliaPostAdapter } from "./australia_post";
 import { RoyalMailAdapter } from "./royal_mail";
 import { CanadaPostAdapter } from "./canada_post";
@@ -41,6 +41,25 @@ import { QuiqupAdapter } from "./quiqup";
 import { OTOAdapter } from "./oto";
 import { EasyParcelAdapter } from "./easy_parcel";
 import { StarlinksAdapter } from "./starlinks";
+
+// Tier 3 — New real implementations
+import { ClickPostAdapter } from "./clickpost";
+import { SendcloudAdapter } from "./sendcloud";
+import { EasyshipAdapter } from "./easyship";
+import { USPSAdapter } from "./usps";
+import { GoswiftAdapter } from "./goswift";
+
+// Tier 4 — New stubs (contact required for API access)
+import { WareIQAdapter } from "./wareiq";
+import { HolisolAdapter } from "./holisol";
+import { ShipdelightAdapter } from "./shipdelight";
+import { ProshipAdapter } from "./proship";
+import { OnlineXpressAdapter } from "./onlinexpress";
+import { DPDUKAdapter } from "./dpd_uk";
+import { DPDGermanyAdapter } from "./dpd_germany";
+import { GLSAdapter } from "./gls";
+import { CargusAdapter } from "./cargus";
+import { EnviaAdapter } from "./envia";
 
 // Register all logistics adapters
 // Indian
@@ -85,6 +104,25 @@ logisticsRegistry.register(new OTOAdapter());
 logisticsRegistry.register(new EasyParcelAdapter());
 logisticsRegistry.register(new StarlinksAdapter());
 
+// New real implementations
+logisticsRegistry.register(new ClickPostAdapter());
+logisticsRegistry.register(new SendcloudAdapter());
+logisticsRegistry.register(new EasyshipAdapter());
+logisticsRegistry.register(new USPSAdapter());
+logisticsRegistry.register(new GoswiftAdapter());
+
+// New stubs
+logisticsRegistry.register(new WareIQAdapter());
+logisticsRegistry.register(new HolisolAdapter());
+logisticsRegistry.register(new ShipdelightAdapter());
+logisticsRegistry.register(new ProshipAdapter());
+logisticsRegistry.register(new OnlineXpressAdapter());
+logisticsRegistry.register(new DPDUKAdapter());
+logisticsRegistry.register(new DPDGermanyAdapter());
+logisticsRegistry.register(new GLSAdapter());
+logisticsRegistry.register(new CargusAdapter());
+logisticsRegistry.register(new EnviaAdapter());
+
 // Re-export for convenience
 export { logisticsRegistry } from "./registry";
 export { LogisticsAdapter } from "./base";
@@ -95,4 +133,5 @@ export type {
   TrackingResult,
   ServiceabilityResult,
   CredentialField,
+  AdapterMeta,
 } from "./base";

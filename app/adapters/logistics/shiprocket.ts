@@ -6,6 +6,7 @@ import {
   type TrackingEvent,
   type ServiceabilityResult,
   type CredentialField,
+  type AdapterMeta,
 } from "./base";
 
 const BASE_URL = "https://apiv2.shiprocket.in/v1/external";
@@ -15,22 +16,102 @@ export class ShiprocketAdapter extends LogisticsAdapter {
   readonly displayName = "Shiprocket";
   readonly region = "india";
   readonly logoUrl = "/images/logos/shiprocket.svg";
+  readonly meta: AdapterMeta = {
+    qcSupport: true,
+    setupGuideUrl: "https://apidocs.shiprocket.in",
+  };
   readonly credentialFields: CredentialField[] = [
     {
       key: "email",
-      label: "Email",
+      label: "API Account Email ID",
       type: "email",
       required: true,
-      placeholder: "you@company.com",
-      helpText: "The email address used for your Shiprocket account",
+      placeholder: "Enter your API account email id",
+      helpText: "The email address used for your Shiprocket API account",
     },
     {
       key: "password",
-      label: "Password",
+      label: "API Account Password",
       type: "password",
       required: true,
-      placeholder: "Your Shiprocket password",
-      helpText: "Your Shiprocket account password",
+      placeholder: "Enter your account password",
+    },
+    {
+      key: "shipping_email",
+      label: "Shipping Email ID",
+      type: "email",
+      required: false,
+      placeholder: "Enter your shipping email id",
+      helpText: "Email used for shipping notifications (optional)",
+    },
+    {
+      key: "qc_enabled",
+      label: "Would you like to enable QC services?",
+      type: "select",
+      required: false,
+      options: [{ label: "No", value: "No" }, { label: "Yes", value: "Yes" }],
+    },
+    {
+      key: "qc_combine",
+      label: "Would you like to combine multiple QC items?",
+      type: "select",
+      required: false,
+      options: [{ label: "No", value: "No" }, { label: "Yes", value: "Yes" }],
+    },
+    {
+      key: "qc_fields",
+      label: "QC Fields",
+      type: "multiselect",
+      required: false,
+      options: [
+        { label: "Brand Tag", value: "Brand Tag" },
+        { label: "Original Packaging", value: "Original Packaging" },
+        { label: "Original Invoice", value: "Original Invoice" },
+        { label: "Accessories", value: "Accessories" },
+        { label: "Serial Number", value: "Serial Number" },
+        { label: "Warranty Card", value: "Warranty Card" },
+        { label: "Price Tag", value: "Price Tag" },
+        { label: "Condition Check", value: "Condition Check" },
+      ],
+    },
+    {
+      key: "return_address_method",
+      label: "How would you like us to get the return address?",
+      type: "select",
+      required: true,
+      options: [
+        { label: "Use Shiprocket warehouse address", value: "Use Shiprocket warehouse address" },
+        { label: "Use my store address", value: "Use my store address" },
+        { label: "Enter custom address", value: "Enter custom address" },
+      ],
+    },
+    {
+      key: "length",
+      label: "Length (cm)",
+      type: "number",
+      required: true,
+      placeholder: "Enter your length",
+    },
+    {
+      key: "breadth",
+      label: "Breadth (cm)",
+      type: "number",
+      required: true,
+      placeholder: "Enter your breadth",
+    },
+    {
+      key: "height",
+      label: "Height (cm)",
+      type: "number",
+      required: true,
+      placeholder: "Enter your height",
+    },
+    {
+      key: "weight",
+      label: "Weight (kg)",
+      type: "number",
+      required: true,
+      placeholder: "Enter weight in kg",
     },
   ];
 
@@ -89,10 +170,18 @@ export class ShiprocketAdapter extends LogisticsAdapter {
         // TODO: confirm whether `discount`, `tax`, `hsn` are required fields
       }));
 
-      const body = {
+      // Use dimensions from stored config, fall back to params, then defaults
+      const cfgLength = Number(credentials.length) || params.length || 10;
+      const cfgBreadth = Number(credentials.breadth) || params.breadth || 10;
+      const cfgHeight = Number(credentials.height) || params.height || 10;
+      const cfgWeight = Number(credentials.weight) || params.weight / 1000 || 0.5;
+      const qcEnabled = credentials.qc_enabled === "Yes";
+      const shippingEmail = credentials.shipping_email || "";
+
+      const body: Record<string, unknown> = {
         order_id: params.returnId,
-        order_date: new Date().toISOString().split("T")[0], // YYYY-MM-DD
-        channel_id: "", // TODO: populate from credentials or config if needed
+        order_date: new Date().toISOString().split("T")[0],
+        channel_id: "",
         pickup_customer_name: params.senderName,
         pickup_address: params.senderAddress,
         pickup_city: params.senderCity,
@@ -111,10 +200,12 @@ export class ShiprocketAdapter extends LogisticsAdapter {
           (sum, i) => sum + i.price * i.quantity,
           0
         ),
-        length: params.length ?? 10,
-        breadth: params.breadth ?? 10,
-        height: params.height ?? 10,
-        weight: params.weight / 1000, // API expects kg; PickupParams has grams
+        length: cfgLength,
+        breadth: cfgBreadth,
+        height: cfgHeight,
+        weight: cfgWeight,
+        ...(qcEnabled ? { qc_enable: true } : {}),
+        ...(shippingEmail ? { shipping_email: shippingEmail } : {}),
       };
 
       const res = await fetch(`${BASE_URL}/orders/create/return`, {
