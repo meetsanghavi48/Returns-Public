@@ -205,6 +205,22 @@ export default function AdminLogistics() {
     defaultFetcher.submit(fd, { method: "post" });
   }, [defaultFetcher]);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [regionFilter, setRegionFilter] = useState("all");
+
+  const allAdapters = available as AdapterInfo[];
+  const regions = [...new Set(allAdapters.map((a) => a.region))].sort();
+  const connectedCount = (connected as ConnectedConfig[]).length;
+
+  const filtered = allAdapters.filter((a) => {
+    if (regionFilter !== "all" && a.region !== regionFilter) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      return a.displayName.toLowerCase().includes(q) || a.key.toLowerCase().includes(q) || a.region.toLowerCase().includes(q);
+    }
+    return true;
+  });
+
   return (
     <>
       <div className="admin-page-header">
@@ -212,7 +228,7 @@ export default function AdminLogistics() {
           <a href="/admin/settings" className="admin-back">&lsaquo; Settings</a>
           <h1 className="admin-page-title">Logistics</h1>
           <p style={{ color: "var(--admin-text-muted)", fontSize: 14, marginTop: 4 }}>
-            Manage your logistics provider integrations ({(available as AdapterInfo[]).length} providers available)
+            {allAdapters.length} providers available &middot; {connectedCount} connected
           </p>
         </div>
       </div>
@@ -221,52 +237,79 @@ export default function AdminLogistics() {
         <div className={`admin-banner ${toast.type === "error" ? "error" : "success"}`}>{toast.message}</div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
-        {(available as AdapterInfo[]).map((adapter) => {
-          const config = connectedMap.get(adapter.key);
-          const isConnected = !!config;
-          const isDefault = config?.isDefault ?? false;
-
-          return (
-            <div key={adapter.key} className="admin-card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: 6,
-                    background: `hsl(${adapter.displayName.charCodeAt(0) * 7 % 360}, 55%, 50%)`,
-                    color: "#fff", fontSize: 13, fontWeight: 700,
-                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                  }}>
-                    {adapter.displayName.charAt(0).toUpperCase()}
-                  </div>
-                  <strong style={{ fontSize: 15 }}>{adapter.displayName}</strong>
-                </div>
-                <span className={`admin-badge ${isConnected ? "delivered" : "archived"}`}>
-                  {isConnected ? "Connected" : "Not connected"}
-                </span>
-              </div>
-
-              <span style={{ fontSize: 13, color: "var(--admin-text-muted)" }}>Region: {adapter.region}</span>
-
-              {isConnected && isDefault && <span className="admin-badge info">Default</span>}
-
-              <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
-                <button className="admin-btn admin-btn-sm" onClick={() => openModal(adapter)}>
-                  {isConnected ? "Manage" : "Connect"}
-                </button>
-                {isConnected && !isDefault && (
-                  <button className="admin-btn admin-btn-sm" onClick={() => handleSetDefault(adapter.key)}>Set Default</button>
-                )}
-                {isConnected && (
-                  <button className="admin-btn admin-btn-sm" style={{ color: "var(--admin-danger)" }} onClick={() => handleDisconnect(adapter.key)}>
-                    Disconnect
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
+      {/* Search & Filter Bar */}
+      <div className="admin-card" style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}>
+        <div style={{ flex: 1 }}>
+          <input
+            className="admin-input"
+            type="text"
+            placeholder="Search logistics partner by name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <select
+          className="admin-select"
+          style={{ width: "auto", minWidth: 140 }}
+          value={regionFilter}
+          onChange={(e) => setRegionFilter(e.target.value)}
+        >
+          <option value="all">All Regions</option>
+          {regions.map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <span style={{ fontSize: 13, color: "var(--admin-text-muted)", whiteSpace: "nowrap" }}>
+          {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+        </span>
       </div>
+
+      {filtered.length === 0 ? (
+        <div className="admin-empty">
+          <div className="admin-empty-icon">{"\uD83D\uDD0D"}</div>
+          <div className="admin-empty-text">No providers found</div>
+          <div className="admin-empty-sub">Try a different search term or region filter</div>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
+          {filtered.map((adapter) => {
+            const config = connectedMap.get(adapter.key);
+            const isConnected = !!config;
+            const isDefault = config?.isDefault ?? false;
+
+            return (
+              <div key={adapter.key} className="admin-card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <ProviderLogo adapterKey={adapter.key} name={adapter.displayName} />
+                    <div>
+                      <strong style={{ fontSize: 14 }}>{adapter.displayName}</strong>
+                      <div style={{ fontSize: 12, color: "var(--admin-text-muted)" }}>{adapter.region}</div>
+                    </div>
+                  </div>
+                  <span className={`admin-badge ${isConnected ? "delivered" : "archived"}`}>
+                    {isConnected ? "Connected" : "Not connected"}
+                  </span>
+                </div>
+
+                {isConnected && isDefault && <span className="admin-badge info" style={{ alignSelf: "flex-start" }}>Default</span>}
+
+                <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
+                  <button className="admin-btn admin-btn-sm" onClick={() => openModal(adapter)}>
+                    {isConnected ? "Manage" : "Connect"}
+                  </button>
+                  {isConnected && !isDefault && (
+                    <button className="admin-btn admin-btn-sm" onClick={() => handleSetDefault(adapter.key)}>Set Default</button>
+                  )}
+                  {isConnected && (
+                    <button className="admin-btn admin-btn-sm" style={{ color: "var(--admin-danger)" }} onClick={() => handleDisconnect(adapter.key)}>
+                      Disconnect
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Connect Modal */}
       {modalAdapter && (
@@ -347,5 +390,66 @@ export default function AdminLogistics() {
         </div>
       )}
     </>
+  );
+}
+
+// Domain mapping for provider logos
+const LOGO_DOMAINS: Record<string, string> = {
+  delhivery: "delhivery.com", shiprocket: "shiprocket.in", nimbuspost: "nimbuspost.com",
+  xpressbees: "xpressbees.com", shadowfax: "shadowfax.in", dtdc: "dtdc.in",
+  bluedart: "bluedart.com", ekart: "ekartlogistics.com", pickrr: "pickrr.com",
+  eshipz: "eshipz.com", shipway: "shipway.com", borzo: "borzo.com",
+  porter: "porter.in", dunzo: "dunzo.com", lalamove: "lalamove.com",
+  amazon_shipping: "amazon.com", ecom_express: "ecomexpress.in",
+  ithink: "ithinklogistics.com", shyplite: "shyplite.com",
+  shippo: "goshippo.com", easypost: "easypost.com", shipstation: "shipstation.com",
+  fedex: "fedex.com", ups: "ups.com", dhl: "dhl.com",
+  australia_post: "auspost.com.au", royal_mail: "royalmail.com",
+  canada_post: "canadapost.ca", postnl: "postnl.nl", correos: "correos.es",
+  aramex: "aramex.com", dhl_gcc: "dhl.com", quiqup: "quiqup.com",
+  oto: "tryoto.com", easy_parcel: "easyparcel.com", starlinks: "starlinks.ae",
+  clickpost: "clickpost.in", sendcloud: "sendcloud.com", easyship: "easyship.com",
+  usps: "usps.com", goswift: "goswift.in", wareiq: "wareiq.com",
+  holisol: "holisollogistics.com", shipdelight: "shipdelight.com",
+  dpd_uk: "dpd.co.uk", dpd_germany: "dpd.com", gls: "gls-group.eu",
+  cargus: "cargus.ro", envia: "envia.com", shipmondo: "shipmondo.com",
+  eshipper: "eshipper.com", vamaship: "vamaship.com",
+  boxnow: "boxnow.gr", velocity: "velocity.in",
+  shadowfax_v2: "shadowfax.in", delhivery_qc_v3: "delhivery.com",
+  proship: "proship.in", shippigo: "shippigo.com",
+  fulfillment_tools: "fulfillmenttools.com",
+};
+
+function ProviderLogo({ adapterKey, name }: { adapterKey: string; name: string }) {
+  const [failed, setFailed] = useState(false);
+  const domain = LOGO_DOMAINS[adapterKey];
+  const letter = name.charAt(0).toUpperCase();
+  const hue = name.charCodeAt(0) * 7 % 360;
+
+  if (!domain || failed) {
+    return (
+      <div style={{
+        width: 36, height: 36, borderRadius: 8,
+        background: `hsl(${hue}, 50%, 92%)`,
+        color: `hsl(${hue}, 55%, 40%)`,
+        fontSize: 16, fontWeight: 700,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0,
+      }}>
+        {letter}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={`https://icon.horse/icon/${domain}`}
+      alt={name}
+      width={36}
+      height={36}
+      style={{ borderRadius: 8, objectFit: "contain", flexShrink: 0, background: "#f9f9f9" }}
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
   );
 }
