@@ -13,9 +13,8 @@ export class DPDUKAdapter extends LogisticsAdapter {
   readonly region = "UK";
   readonly logoUrl = "/logos/dpd.png";
   readonly credentialFields: CredentialField[] = [
-    { key: "username", label: "Username", type: "text", required: true, placeholder: "Enter your DPD UK username" },
-    { key: "password", label: "Password", type: "password", required: true, placeholder: "Enter your DPD UK password" },
-    { key: "account_number", label: "Account Number", type: "text", required: true, placeholder: "Enter your account number" },
+    { key: "username", label: "Username", type: "text", required: true, placeholder: "Enter your username" },
+    { key: "password", label: "Password", type: "password", required: true, placeholder: "Enter your password" },
   ];
 
   async createPickup(_params: PickupParams, _credentials: Record<string, string>): Promise<PickupResult> {

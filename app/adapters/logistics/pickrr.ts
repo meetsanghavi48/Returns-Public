@@ -6,6 +6,7 @@ import {
   type TrackingResult,
   type ServiceabilityResult,
   type CredentialField,
+  type AdapterMeta,
 } from "./base";
 
 const API_BASE = "https://pickrr.com";
@@ -46,15 +47,32 @@ export class PickrrAdapter extends LogisticsAdapter {
   readonly displayName = "Pickrr";
   readonly region = "IN";
   readonly logoUrl = "/logos/pickrr.png";
+  readonly meta: AdapterMeta = {
+    qcSupport: true,
+    setupGuideUrl: "https://docs.pickrr.com/",
+  };
 
   readonly credentialFields: CredentialField[] = [
     {
       key: "auth_token",
       label: "Auth Token",
-      type: "password",
+      type: "text",
       required: true,
-      placeholder: "Your Pickrr auth token",
-      helpText: "Found in Pickrr dashboard under Settings > API Keys",
+      placeholder: "Enter your auth token",
+    },
+    {
+      key: "email",
+      label: "Email",
+      type: "email",
+      required: true,
+      placeholder: "Enter your email",
+    },
+    {
+      key: "qc_enabled",
+      label: "Would you like to enable QC services?",
+      type: "select",
+      required: false,
+      options: [{ label: "No", value: "No" }, { label: "Yes", value: "Yes" }],
     },
   ];
 

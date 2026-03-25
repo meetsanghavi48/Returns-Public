@@ -5,6 +5,7 @@ import {
   PickupResult,
   TrackingResult,
   ServiceabilityResult,
+  type AdapterMeta,
 } from "./base";
 
 // API Reference: https://www.postman.com/rahulc275101/rahul/documentation/q9l8vuo/shyplite-public-collection-copy
@@ -13,20 +14,38 @@ export class ShypliteAdapter extends LogisticsAdapter {
   readonly displayName = "Shyplite";
   readonly region = "IN";
   readonly logoUrl = "/logos/shyplite.png";
+  readonly meta: AdapterMeta = {
+    setupGuideUrl: "https://www.postman.com/rahulc275101/rahul/documentation/q9l8vuo/shyplite-public-collection-copy",
+  };
   readonly credentialFields: CredentialField[] = [
     {
-      key: "apiKey",
-      label: "API Key",
-      type: "password",
+      key: "seller_id",
+      label: "Seller Id",
+      type: "text",
       required: true,
-      placeholder: "Enter your Shyplite API key",
+      placeholder: "Enter your seller id",
     },
     {
-      key: "apiSecret",
-      label: "API Secret",
+      key: "public_key",
+      label: "Public Key",
       type: "password",
       required: true,
-      placeholder: "Enter your Shyplite API secret",
+      placeholder: "Enter your public key",
+    },
+    {
+      key: "app_id",
+      label: "App ID",
+      type: "text",
+      required: true,
+      placeholder: "Enter your app id",
+    },
+    {
+      key: "private_key",
+      label: "Private Key",
+      type: "password",
+      required: true,
+      placeholder: "Enter your private key",
+      helpText: "Shyplite requires you to use both warehouse name and id. Format: warehousename:warehouseid",
     },
   ];
 

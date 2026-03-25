@@ -6,6 +6,7 @@ import {
   type TrackingResult,
   type ServiceabilityResult,
   type CredentialField,
+  type AdapterMeta,
 } from "./base";
 
 const EXPRESS_BASE = "https://api-eu.dhl.com";
@@ -38,26 +39,67 @@ async function dhlFetch(
 
 export class DHLAdapter extends LogisticsAdapter {
   readonly key = "dhl";
-  readonly displayName = "DHL Express";
+  readonly displayName = "DHL National Returns";
   readonly region = "global";
   readonly logoUrl = "/logos/dhl.png";
+  readonly meta: AdapterMeta = {
+    setupGuideUrl: "https://developer.dhl.com/documentation",
+  };
 
   readonly credentialFields: CredentialField[] = [
     {
-      key: "api_key",
-      label: "API Key",
-      type: "password",
-      required: true,
-      placeholder: "Enter your DHL API key",
-      helpText: "Found in DHL Developer Portal under your App credentials",
-    },
-    {
-      key: "account_number",
-      label: "Account Number",
+      key: "app_id",
+      label: "Developer Portal App ID",
       type: "text",
       required: true,
-      placeholder: "Enter your DHL Express account number",
-      helpText: "Your DHL Express shipper account number",
+      placeholder: "Enter your app id",
+    },
+    {
+      key: "app_token",
+      label: "Developer Portal App Token",
+      type: "text",
+      required: true,
+      placeholder: "Enter your app token",
+    },
+    {
+      key: "user_id",
+      label: "Business Portal User ID",
+      type: "text",
+      required: true,
+      placeholder: "Enter your user id",
+    },
+    {
+      key: "user_password",
+      label: "Business Portal User Password",
+      type: "password",
+      required: true,
+      placeholder: "Enter your user password",
+    },
+    {
+      key: "countries",
+      label: "Select countries where you operate",
+      type: "multiselect",
+      required: true,
+      options: [
+        { label: "United Kingdom", value: "United Kingdom" },
+        { label: "Germany", value: "Germany" },
+        { label: "France", value: "France" },
+        { label: "Netherlands", value: "Netherlands" },
+        { label: "Belgium", value: "Belgium" },
+        { label: "Austria", value: "Austria" },
+        { label: "Italy", value: "Italy" },
+        { label: "Spain", value: "Spain" },
+        { label: "Poland", value: "Poland" },
+        { label: "Czech Republic", value: "Czech Republic" },
+        { label: "Slovakia", value: "Slovakia" },
+        { label: "Hungary", value: "Hungary" },
+        { label: "Romania", value: "Romania" },
+        { label: "Portugal", value: "Portugal" },
+        { label: "Sweden", value: "Sweden" },
+        { label: "Denmark", value: "Denmark" },
+        { label: "Finland", value: "Finland" },
+        { label: "Norway", value: "Norway" },
+      ],
     },
   ];
 
@@ -65,7 +107,7 @@ export class DHLAdapter extends LogisticsAdapter {
     params: PickupParams,
     credentials: Record<string, string>,
   ): Promise<PickupResult> {
-    const { api_key, account_number } = credentials;
+    const { app_token: api_key, user_id: account_number } = credentials;
 
     try {
       const totalWeight = Math.max(params.weight / 1000, 0.5); // kg
@@ -248,7 +290,7 @@ export class DHLAdapter extends LogisticsAdapter {
     awb: string,
     credentials: Record<string, string>,
   ): Promise<TrackingResult> {
-    const { api_key } = credentials;
+    const { app_token: api_key } = credentials;
 
     try {
       const data = await dhlFetch(
@@ -323,7 +365,7 @@ export class DHLAdapter extends LogisticsAdapter {
     destPin: string,
     credentials: Record<string, string>,
   ): Promise<ServiceabilityResult> {
-    const { api_key, account_number } = credentials;
+    const { app_token: api_key, user_id: account_number } = credentials;
 
     try {
       const payload = {
@@ -399,7 +441,7 @@ export class DHLAdapter extends LogisticsAdapter {
   async validateCredentials(
     credentials: Record<string, string>,
   ): Promise<{ valid: boolean; error?: string }> {
-    const { api_key } = credentials;
+    const { app_token: api_key } = credentials;
 
     if (!api_key) {
       return { valid: false, error: "API key is required" };
@@ -447,7 +489,7 @@ export class DHLAdapter extends LogisticsAdapter {
     awb: string,
     credentials: Record<string, string>,
   ): Promise<{ success: boolean; error?: string }> {
-    const { api_key } = credentials;
+    const { app_token: api_key } = credentials;
 
     try {
       // DHL uses DELETE with the dispatch confirmation number

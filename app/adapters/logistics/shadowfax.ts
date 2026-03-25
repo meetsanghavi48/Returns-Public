@@ -6,6 +6,7 @@ import {
   type TrackingResult,
   type ServiceabilityResult,
   type CredentialField,
+  type AdapterMeta,
 } from "./base";
 
 const API_BASE = "https://api.shadowfax.in";
@@ -42,23 +43,25 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
   readonly displayName = "Shadowfax";
   readonly region = "IN";
   readonly logoUrl = "/logos/shadowfax.png";
+  readonly meta: AdapterMeta = {
+    qcSupport: true,
+    contactEmail: "hello@shadowfax.in",
+  };
 
   readonly credentialFields: CredentialField[] = [
     {
-      key: "api_key",
-      label: "API Key",
-      type: "password",
-      required: true,
-      placeholder: "Your Shadowfax API Key",
-      helpText: "API key provided during Shadowfax onboarding",
-    },
-    {
-      key: "client_code",
-      label: "Client Code",
+      key: "api_token",
+      label: "API Token",
       type: "text",
       required: true,
-      placeholder: "Your Shadowfax Client Code",
-      helpText: "Client code assigned by Shadowfax",
+      placeholder: "Enter your API token",
+    },
+    {
+      key: "gstin",
+      label: "GSTIN",
+      type: "text",
+      required: true,
+      placeholder: "Enter your GSTIN",
     },
   ];
 
@@ -66,7 +69,7 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
     params: PickupParams,
     credentials: Record<string, string>,
   ): Promise<PickupResult> {
-    const { api_key, client_code } = credentials;
+    const { api_token, gstin } = credentials;
 
     const totalAmount = params.items.reduce(
       (sum, i) => sum + i.price * i.quantity,
@@ -79,7 +82,7 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
         .slice(0, 200) || "Return Shipment";
 
     const payload = {
-      client_code,
+      gstin,
       order_id: `${params.orderNumber}_${params.returnId}`,
       order_type: "reverse",
       pickup_details: {
@@ -121,7 +124,7 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
 
     try {
       const data = await shadowfaxFetch(
-        api_key,
+        api_token,
         "POST",
         "/api/v2/orders/",
         payload,
@@ -166,11 +169,11 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
     awb: string,
     credentials: Record<string, string>,
   ): Promise<TrackingResult> {
-    const { api_key } = credentials;
+    const { api_token } = credentials;
 
     try {
       const data = await shadowfaxFetch(
-        api_key,
+        api_token,
         "GET",
         `/api/v2/orders/${encodeURIComponent(awb)}/status/`,
       );
@@ -246,13 +249,13 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
     destPin: string,
     credentials: Record<string, string>,
   ): Promise<ServiceabilityResult> {
-    const { api_key } = credentials;
+    const { api_token } = credentials;
 
     try {
       // Shadowfax may not have a dedicated serviceability endpoint; use orders API
       // to check if the pincodes are served. Fall back to a pincode check endpoint.
       const data = await shadowfaxFetch(
-        api_key,
+        api_token,
         "GET",
         `/api/v2/serviceability/?origin_pincode=${encodeURIComponent(originPin)}&destination_pincode=${encodeURIComponent(destPin)}`,
       );
@@ -260,7 +263,7 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
       if (data?.error || data?.status === 404) {
         // Try alternative endpoint format
         const altData = await shadowfaxFetch(
-          api_key,
+          api_token,
           "GET",
           `/api/v2/pincodes/serviceability/?pickup_pincode=${encodeURIComponent(originPin)}&drop_pincode=${encodeURIComponent(destPin)}`,
         );
@@ -316,19 +319,19 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
   async validateCredentials(
     credentials: Record<string, string>,
   ): Promise<{ valid: boolean; error?: string }> {
-    const { api_key, client_code } = credentials;
+    const { api_token, gstin } = credentials;
 
-    if (!api_key) {
+    if (!api_token) {
       return { valid: false, error: "API Key is required" };
     }
-    if (!client_code) {
+    if (!gstin) {
       return { valid: false, error: "Client Code is required" };
     }
 
     try {
       // Test credentials with a lightweight API call
       const data = await shadowfaxFetch(
-        api_key,
+        api_token,
         "GET",
         `/api/v2/orders/TEST000000000/status/`,
       );
@@ -370,11 +373,11 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
     awb: string,
     credentials: Record<string, string>,
   ): Promise<{ success: boolean; error?: string }> {
-    const { api_key } = credentials;
+    const { api_token } = credentials;
 
     try {
       const data = await shadowfaxFetch(
-        api_key,
+        api_token,
         "POST",
         `/api/v2/orders/${encodeURIComponent(awb)}/cancel/`,
         {
