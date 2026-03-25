@@ -6,7 +6,7 @@
   "scripts": {
     "build": "remix vite:build",
     "dev": "remix vite:dev",
-    "start": "remix-serve ./build/server/index.js",
+    "start": "node -r dotenv/config node_modules/.bin/remix-serve ./build/server/index.js",
     "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
     "shopify": "shopify",
     "prisma": "prisma",
@@ -25,6 +25,7 @@
     "@shopify/polaris-icons": "^9.3.1",
     "@shopify/shopify-app-remix": "^3.7.0",
     "@shopify/shopify-app-session-storage-prisma": "^5.1.5",
+    "dotenv": "^17.3.1",
     "isbot": "^5.1.17",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
