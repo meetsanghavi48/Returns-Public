@@ -17,7 +17,6 @@ import {
   InlineStack,
   Text,
   Grid,
-  Frame,
   Toast,
   Link,
 } from "@shopify/polaris";
@@ -25,7 +24,7 @@ import { useState, useCallback, useEffect } from "react";
 
 import "~/adapters/logistics/index";
 import { logisticsRegistry } from "~/adapters/logistics/registry";
-import { authenticate } from "~/shopify.server";
+import { requireAdminAuth } from "~/services/admin-session.server";
 import prisma from "~/db.server";
 import { encrypt } from "~/utils/encryption.server";
 
@@ -63,8 +62,7 @@ interface ConnectedConfig {
 }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = session.shop;
+  const { shop, accessToken } = await requireAdminAuth(request);
 
   const logisticsConfigs = await prisma.logisticsConfig.findMany({
     where: { shop, isActive: true },
@@ -90,8 +88,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = session.shop;
+  const { shop, accessToken } = await requireAdminAuth(request);
   const formData = await request.formData();
   const intent = formData.get("intent") as string;
   const providerKey = formData.get("providerKey") as string;
@@ -216,9 +213,9 @@ export default function SettingsLogistics() {
   }, []);
 
   return (
-    
+
       <Page
-        backAction={{ content: "Settings", url: "/app/settings" }}
+        backAction={{ content: "Settings", url: "/admin/settings" }}
         title="Logistics"
         subtitle="Manage your logistics provider integrations"
       >
@@ -236,7 +233,7 @@ export default function SettingsLogistics() {
           />
         )}
       </Page>
-    
+
   );
 }
 

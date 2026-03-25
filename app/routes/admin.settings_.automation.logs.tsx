@@ -5,12 +5,11 @@ import {
   Page, Card, DataTable, Badge, BlockStack, Text,  Select, InlineStack,
 } from "@shopify/polaris";
 import { useState, useMemo } from "react";
-import { authenticate } from "~/shopify.server";
+import { requireAdminAuth } from "~/services/admin-session.server";
 import prisma from "~/db.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = session.shop;
+  const { shop, accessToken } = await requireAdminAuth(request);
 
   const logs = await prisma.automationLog.findMany({
     where: { shop },
@@ -53,9 +52,9 @@ export default function AutomationLogs() {
   });
 
   return (
-    
+
       <Page
-        backAction={{ content: "Automations", url: "/app/settings/automation" }}
+        backAction={{ content: "Automations", url: "/admin/settings/automation" }}
         title="Automation Logs"
         subtitle="History of automation rule executions"
       >
@@ -93,6 +92,6 @@ export default function AutomationLogs() {
           </Card>
         </BlockStack>
       </Page>
-    
+
   );
 }

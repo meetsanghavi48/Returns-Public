@@ -39,18 +39,14 @@ export default function AdminLayout() {
               to="/admin/dashboard"
               className={({ isActive }) => `admin-nav-item ${isActive ? "active" : ""}`}
             >
-              <span className="admin-nav-icon">📊</span>
-              Dashboard
+              <span className="admin-nav-icon">{"\uD83C\uDFE0"}</span>
+              Home
             </NavLink>
-          </div>
-
-          <div className="admin-sidebar-section">
-            <div className="admin-sidebar-section-title">Management</div>
             <NavLink
               to="/admin/returns"
               className={({ isActive }) => `admin-nav-item ${isActive ? "active" : ""}`}
             >
-              <span className="admin-nav-icon">📋</span>
+              <span className="admin-nav-icon">{"\uD83D\uDCE6"}</span>
               Returns
               {pendingCount > 0 && (
                 <span className="admin-nav-badge">{pendingCount}</span>
@@ -62,16 +58,24 @@ export default function AdminLayout() {
             <div className="admin-sidebar-section-title">Configuration</div>
             <NavLink
               to="/admin/settings"
+              end
               className={({ isActive }) => `admin-nav-item ${isActive ? "active" : ""}`}
             >
-              <span className="admin-nav-icon">⚙️</span>
+              <span className="admin-nav-icon">{"\u2699\uFE0F"}</span>
               Settings
+            </NavLink>
+            <NavLink
+              to="/admin/settings/automation"
+              className={({ isActive }) => `admin-nav-item ${isActive ? "active" : ""}`}
+            >
+              <span className="admin-nav-icon">{"\u26A1"}</span>
+              Automation
             </NavLink>
             <NavLink
               to="/admin/audit"
               className={({ isActive }) => `admin-nav-item ${isActive ? "active" : ""}`}
             >
-              <span className="admin-nav-icon">📜</span>
+              <span className="admin-nav-icon">{"\uD83D\uDCDC"}</span>
               Audit Log
             </NavLink>
           </div>

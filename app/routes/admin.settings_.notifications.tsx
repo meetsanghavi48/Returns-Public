@@ -13,19 +13,19 @@ import {
   Text,
 } from "@shopify/polaris";
 import { useState, useEffect } from "react";
-import { authenticate } from "../shopify.server";
+import { requireAdminAuth } from "../services/admin-session.server";
 import { getAllSettings, setSetting } from "../services/settings.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = session.shop;
+  const { shop, accessToken } = await requireAdminAuth(request);
+  
   const settings = await getAllSettings(shop);
   return json({ settings });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = session.shop;
+  const { shop, accessToken } = await requireAdminAuth(request);
+  
   const formData = await request.formData();
 
   const fields: Record<string, unknown> = {
@@ -89,7 +89,7 @@ export default function SettingsNotifications() {
 
   return (
     <Page
-      backAction={{ content: "Settings", url: "/app/settings" }}
+      backAction={{ content: "Settings", url: "/admin/settings" }}
       title="Notifications"
       primaryAction={
         <Button variant="primary" onClick={handleSave} loading={isLoading}>

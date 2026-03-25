@@ -4,5 +4,5 @@ import { redirect } from "@remix-run/node";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   // Preserve all query params (id_token, shop, hmac, etc.) when redirecting
-  return redirect(`/admin/dashboard${url.search}`);
+  return redirect(`/admin/dashboard`);
 };

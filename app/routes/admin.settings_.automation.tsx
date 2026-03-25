@@ -6,13 +6,12 @@ import {
   Banner,  Toast, EmptyState,
 } from "@shopify/polaris";
 import { useState, useCallback } from "react";
-import { authenticate } from "~/shopify.server";
+import { requireAdminAuth } from "~/services/admin-session.server";
 import prisma from "~/db.server";
 import { ensureDefaultRules } from "~/services/automation.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = session.shop;
+  const { shop, accessToken } = await requireAdminAuth(request);
 
   await ensureDefaultRules(shop);
 
@@ -31,8 +30,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = session.shop;
+  const { shop, accessToken } = await requireAdminAuth(request);
   const formData = await request.formData();
   const intent = formData.get("intent") as string;
   const ruleId = formData.get("ruleId") as string;
@@ -64,13 +62,13 @@ export default function SettingsAutomation() {
   const activeCount = (rules as any[]).filter((r) => r.isActive).length;
 
   return (
-    
+
       <Page
-        backAction={{ content: "Settings", url: "/app/settings" }}
+        backAction={{ content: "Settings", url: "/admin/settings" }}
         title="Automations"
         subtitle="Create rules to automatically perform actions based on conditions. Reduce manual work and respond faster."
-        primaryAction={{ content: "+ Create new rule", onAction: () => navigate("/app/settings/automation/new") }}
-        secondaryActions={[{ content: "View logs", onAction: () => navigate("/app/settings/automation/logs") }]}
+        primaryAction={{ content: "+ Create new rule", onAction: () => navigate("/admin/settings/automation/new") }}
+        secondaryActions={[{ content: "View logs", onAction: () => navigate("/admin/settings/automation/logs") }]}
       >
         <Layout>
           <Layout.Section variant="oneThird">
@@ -101,7 +99,7 @@ export default function SettingsAutomation() {
               <Card>
                 <EmptyState
                   heading="No automation rules yet"
-                  action={{ content: "Create your first rule", onAction: () => navigate("/app/settings/automation/new") }}
+                  action={{ content: "Create your first rule", onAction: () => navigate("/admin/settings/automation/new") }}
                   image=""
                 >
                   <p>Set up rules to automate approvals, rejections, tagging, and more.</p>
@@ -119,7 +117,7 @@ export default function SettingsAutomation() {
 
         {toastMsg && <Toast content={toastMsg} onDismiss={() => setToastMsg("")} duration={3000} />}
       </Page>
-    
+
   );
 }
 
@@ -168,7 +166,7 @@ function RuleCard({ rule, onToast }: { rule: any; onToast: (msg: string) => void
             <Button size="slim" onClick={handleToggle}>
               {isActive ? "Turn Off" : "Turn On"}
             </Button>
-            <Button size="slim" onClick={() => navigate(`/app/settings/automation/${rule.id}`)}>Edit</Button>
+            <Button size="slim" onClick={() => navigate(`/admin/settings/automation/${rule.id}`)}>Edit</Button>
             <Button size="slim" tone="critical" onClick={handleDelete}>Delete</Button>
           </InlineStack>
         </InlineStack>

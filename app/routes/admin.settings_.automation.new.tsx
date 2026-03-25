@@ -1,21 +1,17 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { useLoaderData, useActionData, useSubmit, useNavigation } from "@remix-run/react";
-import { authenticate } from "~/shopify.server";
+import { useActionData, useSubmit, useNavigation } from "@remix-run/react";
+import { requireAdminAuth } from "~/services/admin-session.server";
 import prisma from "~/db.server";
 import RuleBuilder from "~/components/RuleBuilder";
 
-export const loader = async ({ request, params }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = session.shop;
-  const rule = await prisma.automationRule.findFirst({ where: { id: params.id, shop } });
-  if (!rule) throw new Response("Rule not found", { status: 404 });
-  return json({ rule });
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  await requireAdminAuth(request);
+  return json({});
 };
 
-export const action = async ({ request, params }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = session.shop;
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { shop, accessToken } = await requireAdminAuth(request);
   const formData = await request.formData();
   const name = formData.get("name") as string;
   const description = formData.get("description") as string;
@@ -36,16 +32,14 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   if (conditions.length === 0) return json({ error: "At least one condition is required." });
   if (actions.length === 0) return json({ error: "At least one action is required." });
 
-  await prisma.automationRule.updateMany({
-    where: { id: params.id, shop },
-    data: { name: name.trim(), description: description?.trim() || null, matchType: matchType || "ALL", conditions, actions },
+  await prisma.automationRule.create({
+    data: { shop, name: name.trim(), description: description?.trim() || null, matchType: matchType || "ALL", conditions, actions, isActive: true },
   });
 
-  return redirect("/app/settings/automation");
+  return redirect("/admin/settings/automation");
 };
 
-export default function EditAutomationRule() {
-  const { rule } = useLoaderData<typeof loader>() as any;
+export default function NewAutomationRule() {
   const actionData = useActionData<any>();
   const submit = useSubmit();
   const navigation = useNavigation();
@@ -53,14 +47,7 @@ export default function EditAutomationRule() {
 
   return (
     <RuleBuilder
-      title={`Edit: ${rule.name}`}
-      initialData={{
-        name: rule.name,
-        description: rule.description || "",
-        matchType: rule.matchType,
-        conditions: rule.conditions as any[],
-        actions: rule.actions as any[],
-      }}
+      title="Create new rule"
       error={actionData?.error}
       isSubmitting={isSubmitting}
       onSave={(data) => {
