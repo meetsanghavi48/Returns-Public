@@ -11,7 +11,7 @@ export class DHLGCCAdapter extends LogisticsAdapter {
   readonly key = "dhl_gcc";
   readonly displayName = "DHL GCC";
   readonly region = "GCC";
-  readonly logoUrl = "/logos/dhl-gcc.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=dhl.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

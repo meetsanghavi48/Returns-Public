@@ -15,7 +15,7 @@ export class ShiprocketAdapter extends LogisticsAdapter {
   readonly key = "shiprocket";
   readonly displayName = "Shiprocket";
   readonly region = "india";
-  readonly logoUrl = "/images/logos/shiprocket.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=shiprocket.in&sz=64";
   readonly meta: AdapterMeta = {
     qcSupport: true,
     setupGuideUrl: "https://apidocs.shiprocket.in",

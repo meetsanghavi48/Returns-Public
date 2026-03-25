@@ -135,7 +135,7 @@ export class EcomExpressAdapter extends LogisticsAdapter {
   readonly key = "ecom_express";
   readonly displayName = "Ecom Express";
   readonly region = "IN";
-  readonly logoUrl = "/images/logistics/ecom_express.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=ecomexpress.in&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

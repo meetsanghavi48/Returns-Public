@@ -13,7 +13,7 @@ export class ShypliteAdapter extends LogisticsAdapter {
   readonly key = "shyplite";
   readonly displayName = "Shyplite";
   readonly region = "IN";
-  readonly logoUrl = "/logos/shyplite.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=shyplite.com&sz=64";
   readonly meta: AdapterMeta = {
     setupGuideUrl: "https://www.postman.com/rahulc275101/rahul/documentation/q9l8vuo/shyplite-public-collection-copy",
   };

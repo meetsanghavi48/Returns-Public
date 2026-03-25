@@ -11,7 +11,7 @@ export class RoyalMailAdapter extends LogisticsAdapter {
   readonly key = "royal_mail";
   readonly displayName = "Royal Mail";
   readonly region = "GB";
-  readonly logoUrl = "/logos/royal-mail.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=royalmail.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

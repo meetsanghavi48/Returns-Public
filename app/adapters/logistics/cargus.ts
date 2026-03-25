@@ -11,7 +11,7 @@ export class CargusAdapter extends LogisticsAdapter {
   readonly key = "cargus";
   readonly displayName = "Cargus";
   readonly region = "RO";
-  readonly logoUrl = "/logos/cargus.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=cargus.ro&sz=64";
   readonly credentialFields: CredentialField[] = [
     { key: "username", label: "Username", type: "text", required: true, placeholder: "Enter your Cargus username" },
     { key: "password", label: "Password", type: "password", required: true, placeholder: "Enter your Cargus password" },

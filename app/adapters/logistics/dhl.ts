@@ -41,7 +41,7 @@ export class DHLAdapter extends LogisticsAdapter {
   readonly key = "dhl";
   readonly displayName = "DHL National Returns";
   readonly region = "global";
-  readonly logoUrl = "/logos/dhl.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=dhl.com&sz=64";
   readonly meta: AdapterMeta = {
     setupGuideUrl: "https://developer.dhl.com/documentation",
   };

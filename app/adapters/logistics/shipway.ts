@@ -139,7 +139,7 @@ export class ShipwayAdapter extends LogisticsAdapter {
   readonly key = "shipway";
   readonly displayName = "Shipway";
   readonly region = "IN";
-  readonly logoUrl = "/images/logistics/shipway.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=shipway.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

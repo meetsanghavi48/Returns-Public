@@ -66,7 +66,7 @@ export class AustraliaPostAdapter extends LogisticsAdapter {
   readonly key = "australia_post";
   readonly displayName = "Australia Post";
   readonly region = "AU";
-  readonly logoUrl = "/logos/australia-post.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=auspost.com.au&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

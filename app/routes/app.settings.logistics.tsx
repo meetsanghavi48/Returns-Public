@@ -393,9 +393,19 @@ function LogisticsProviderList({ adapters, connected, showToast }: LogisticsProv
                 <Card>
                   <BlockStack gap="300">
                     <InlineStack align="space-between" blockAlign="start">
-                      <Text as="h3" variant="headingMd">
-                        {adapter.displayName}
-                      </Text>
+                      <InlineStack gap="200" blockAlign="center">
+                        <img
+                          src={adapter.logoUrl}
+                          alt={adapter.displayName}
+                          width={24}
+                          height={24}
+                          style={{ borderRadius: 4 }}
+                          loading="lazy"
+                        />
+                        <Text as="h3" variant="headingMd">
+                          {adapter.displayName}
+                        </Text>
+                      </InlineStack>
                       <Badge tone={isConnected ? "success" : undefined}>
                         {isConnected ? "Connected" : "Not connected"}
                       </Badge>

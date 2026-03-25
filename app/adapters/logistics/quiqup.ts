@@ -11,7 +11,7 @@ export class QuiqupAdapter extends LogisticsAdapter {
   readonly key = "quiqup";
   readonly displayName = "Quiqup";
   readonly region = "GCC";
-  readonly logoUrl = "/logos/quiqup.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=quiqup.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

@@ -11,7 +11,7 @@ export class EshipzAdapter extends LogisticsAdapter {
   readonly key = "eshipz";
   readonly displayName = "Eshipz";
   readonly region = "IN";
-  readonly logoUrl = "/logos/eshipz.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=eshipz.com&sz=64";
   readonly credentialFields: CredentialField[] = [
     {
       key: "apiKey",

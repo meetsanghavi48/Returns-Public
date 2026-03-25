@@ -40,7 +40,7 @@ export class EasyshipAdapter extends LogisticsAdapter {
   readonly key = "easyship";
   readonly displayName = "Easyship";
   readonly region = "global";
-  readonly logoUrl = "/logos/easyship.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=easyship.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

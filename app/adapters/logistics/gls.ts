@@ -11,7 +11,7 @@ export class GLSAdapter extends LogisticsAdapter {
   readonly key = "gls";
   readonly displayName = "GLS";
   readonly region = "EU";
-  readonly logoUrl = "/logos/gls.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=gls-group.eu&sz=64";
   readonly credentialFields: CredentialField[] = [
     { key: "username", label: "Username", type: "text", required: true, placeholder: "Enter your GLS username" },
     { key: "password", label: "Password", type: "password", required: true, placeholder: "Enter your GLS password" },

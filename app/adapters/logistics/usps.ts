@@ -75,7 +75,7 @@ export class USPSAdapter extends LogisticsAdapter {
   readonly key = "usps";
   readonly displayName = "USPS";
   readonly region = "US";
-  readonly logoUrl = "/logos/usps.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=usps.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

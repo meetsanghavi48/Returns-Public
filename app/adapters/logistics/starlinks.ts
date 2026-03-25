@@ -11,7 +11,7 @@ export class StarlinksAdapter extends LogisticsAdapter {
   readonly key = "starlinks";
   readonly displayName = "Starlinks";
   readonly region = "global";
-  readonly logoUrl = "/logos/starlinks.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=starlinks.ae&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

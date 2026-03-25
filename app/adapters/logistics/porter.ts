@@ -11,7 +11,7 @@ export class PorterAdapter extends LogisticsAdapter {
   readonly key = "porter";
   readonly displayName = "Porter";
   readonly region = "IN";
-  readonly logoUrl = "/logos/porter.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=porter.in&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

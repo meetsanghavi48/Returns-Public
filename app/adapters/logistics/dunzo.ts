@@ -11,7 +11,7 @@ export class DunzoAdapter extends LogisticsAdapter {
   readonly key = "dunzo";
   readonly displayName = "Dunzo";
   readonly region = "IN";
-  readonly logoUrl = "/logos/dunzo.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=dunzo.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

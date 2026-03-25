@@ -51,7 +51,7 @@ export class AramexAdapter extends LogisticsAdapter {
   readonly key = "aramex";
   readonly displayName = "Aramex";
   readonly region = "GCC";
-  readonly logoUrl = "/logos/aramex.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=aramex.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

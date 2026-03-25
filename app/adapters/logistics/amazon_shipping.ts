@@ -11,7 +11,7 @@ export class AmazonShippingAdapter extends LogisticsAdapter {
   readonly key = "amazon_shipping";
   readonly displayName = "Amazon Shipping";
   readonly region = "IN";
-  readonly logoUrl = "/logos/amazon-shipping.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=shipping.amazon.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

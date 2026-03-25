@@ -11,7 +11,7 @@ export class OnlineXpressAdapter extends LogisticsAdapter {
   readonly key = "onlinexpress";
   readonly displayName = "OnlineXpress";
   readonly region = "IN";
-  readonly logoUrl = "/logos/onlinexpress.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=onlinexpress.in&sz=64";
   readonly credentialFields: CredentialField[] = [
     { key: "api_key", label: "API Key", type: "password", required: true, placeholder: "Enter your OnlineXpress API key" },
     { key: "client_id", label: "Client ID", type: "text", required: true, placeholder: "Enter your client ID" },

@@ -46,7 +46,7 @@ export class PickrrAdapter extends LogisticsAdapter {
   readonly key = "pickrr";
   readonly displayName = "Pickrr";
   readonly region = "IN";
-  readonly logoUrl = "/logos/pickrr.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=pickrr.com&sz=64";
   readonly meta: AdapterMeta = {
     qcSupport: true,
     setupGuideUrl: "https://docs.pickrr.com/",

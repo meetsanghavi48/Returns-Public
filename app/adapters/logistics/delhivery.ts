@@ -49,7 +49,7 @@ export class DelhiveryAdapter extends LogisticsAdapter {
   readonly key = "delhivery";
   readonly displayName = "Delhivery";
   readonly region = "india";
-  readonly logoUrl = "/images/logistics/delhivery.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=delhivery.com&sz=64";
   readonly meta: AdapterMeta = {
     qcSupport: false,
     setupGuideUrl: "https://www.delhivery.com/developers",

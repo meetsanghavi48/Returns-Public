@@ -40,7 +40,7 @@ export class GoswiftAdapter extends LogisticsAdapter {
   readonly key = "goswift";
   readonly displayName = "Goswift";
   readonly region = "IN";
-  readonly logoUrl = "/logos/goswift.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=goswift.in&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

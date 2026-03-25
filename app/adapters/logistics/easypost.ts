@@ -74,7 +74,7 @@ export class EasyPostAdapter extends LogisticsAdapter {
   readonly key = "easypost";
   readonly displayName = "EasyPost";
   readonly region = "global";
-  readonly logoUrl = "/logos/easypost.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=easypost.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

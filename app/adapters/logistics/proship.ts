@@ -11,7 +11,7 @@ export class ProshipAdapter extends LogisticsAdapter {
   readonly key = "proship";
   readonly displayName = "Proship";
   readonly region = "IN";
-  readonly logoUrl = "/logos/proship.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=proship.in&sz=64";
   readonly credentialFields: CredentialField[] = [
     { key: "api_key", label: "API Key", type: "password", required: true, placeholder: "Enter your Proship API key" },
     { key: "client_code", label: "Client Code", type: "text", required: true, placeholder: "Enter your client code" },

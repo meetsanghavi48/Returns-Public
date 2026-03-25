@@ -11,7 +11,7 @@ export class DPDGermanyAdapter extends LogisticsAdapter {
   readonly key = "dpd_germany";
   readonly displayName = "DPD Germany";
   readonly region = "DE";
-  readonly logoUrl = "/logos/dpd.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=dpd.com&sz=64";
   readonly credentialFields: CredentialField[] = [
     { key: "username", label: "Username", type: "text", required: true, placeholder: "Enter your DPD Germany username" },
     { key: "password", label: "Password", type: "password", required: true, placeholder: "Enter your DPD Germany password" },

@@ -11,7 +11,7 @@ export class BorzoAdapter extends LogisticsAdapter {
   readonly key = "borzo";
   readonly displayName = "Borzo (WeFast)";
   readonly region = "IN";
-  readonly logoUrl = "/logos/borzo.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=borzo.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

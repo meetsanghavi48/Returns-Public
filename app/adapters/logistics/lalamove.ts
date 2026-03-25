@@ -11,7 +11,7 @@ export class LalamoveAdapter extends LogisticsAdapter {
   readonly key = "lalamove";
   readonly displayName = "Lalamove";
   readonly region = "global";
-  readonly logoUrl = "/logos/lalamove.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=lalamove.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

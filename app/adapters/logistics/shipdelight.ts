@@ -11,7 +11,7 @@ export class ShipdelightAdapter extends LogisticsAdapter {
   readonly key = "shipdelight";
   readonly displayName = "Shipdelight";
   readonly region = "IN";
-  readonly logoUrl = "/logos/shipdelight.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=shipdelight.com&sz=64";
   readonly credentialFields: CredentialField[] = [
     { key: "api_token", label: "API Token", type: "password", required: true, placeholder: "Enter your Shipdelight API token" },
     { key: "seller_id", label: "Seller ID", type: "text", required: true, placeholder: "Enter your seller ID" },

@@ -79,7 +79,7 @@ export class CanadaPostAdapter extends LogisticsAdapter {
   readonly key = "canada_post";
   readonly displayName = "Canada Post";
   readonly region = "CA";
-  readonly logoUrl = "/logos/canada-post.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=canadapost.ca&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

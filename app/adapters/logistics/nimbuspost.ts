@@ -15,7 +15,7 @@ export class NimbuspostAdapter extends LogisticsAdapter {
   readonly key = "nimbuspost";
   readonly displayName = "Nimbuspost";
   readonly region = "india";
-  readonly logoUrl = "/images/logos/nimbuspost.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=nimbuspost.com&sz=64";
   readonly meta: AdapterMeta = {
     qcSupport: true,
     setupGuideUrl: "https://documenter.getpostman.com/view/9692837/TW6wHnoz",

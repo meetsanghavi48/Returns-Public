@@ -42,7 +42,7 @@ export class SendcloudAdapter extends LogisticsAdapter {
   readonly key = "sendcloud";
   readonly displayName = "Sendcloud";
   readonly region = "EU";
-  readonly logoUrl = "/logos/sendcloud.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=sendcloud.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

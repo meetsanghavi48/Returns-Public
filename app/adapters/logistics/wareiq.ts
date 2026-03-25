@@ -11,7 +11,7 @@ export class WareIQAdapter extends LogisticsAdapter {
   readonly key = "wareiq";
   readonly displayName = "WareIQ";
   readonly region = "IN";
-  readonly logoUrl = "/logos/wareiq.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=wareiq.com&sz=64";
   readonly credentialFields: CredentialField[] = [
     { key: "api_key", label: "API Key", type: "password", required: true, placeholder: "Enter your WareIQ API key" },
     { key: "warehouse_id", label: "Warehouse ID", type: "text", required: true, placeholder: "Enter your warehouse ID" },

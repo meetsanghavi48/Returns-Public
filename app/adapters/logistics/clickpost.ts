@@ -40,7 +40,7 @@ export class ClickPostAdapter extends LogisticsAdapter {
   readonly key = "clickpost";
   readonly displayName = "ClickPost";
   readonly region = "IN";
-  readonly logoUrl = "/logos/clickpost.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=clickpost.in&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

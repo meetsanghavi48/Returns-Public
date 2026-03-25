@@ -43,7 +43,7 @@ export class BluedartAdapter extends LogisticsAdapter {
   readonly key = "bluedart";
   readonly displayName = "Bluedart";
   readonly region = "IN";
-  readonly logoUrl = "/logos/bluedart.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=bluedart.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

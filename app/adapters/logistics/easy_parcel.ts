@@ -38,7 +38,7 @@ export class EasyParcelAdapter extends LogisticsAdapter {
   readonly key = "easy_parcel";
   readonly displayName = "Easy Parcel";
   readonly region = "SEA";
-  readonly logoUrl = "/logos/easy-parcel.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=easyparcel.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

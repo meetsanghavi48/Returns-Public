@@ -11,7 +11,7 @@ export class EkartAdapter extends LogisticsAdapter {
   readonly key = "ekart";
   readonly displayName = "Ekart Logistics";
   readonly region = "IN";
-  readonly logoUrl = "/logos/ekart.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=ekartlogistics.com&sz=64";
   readonly credentialFields: CredentialField[] = [
     {
       key: "apiKey",

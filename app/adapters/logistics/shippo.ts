@@ -79,7 +79,7 @@ export class ShippoAdapter extends LogisticsAdapter {
   readonly key = "shippo";
   readonly displayName = "Shippo";
   readonly region = "global";
-  readonly logoUrl = "/logos/shippo.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=goshippo.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

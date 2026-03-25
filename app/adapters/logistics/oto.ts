@@ -11,7 +11,7 @@ export class OTOAdapter extends LogisticsAdapter {
   readonly key = "oto";
   readonly displayName = "OTO";
   readonly region = "GCC";
-  readonly logoUrl = "/logos/oto.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=tryoto.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

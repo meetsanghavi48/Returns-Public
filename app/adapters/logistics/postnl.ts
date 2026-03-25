@@ -11,7 +11,7 @@ export class PostNLAdapter extends LogisticsAdapter {
   readonly key = "postnl";
   readonly displayName = "PostNL";
   readonly region = "NL";
-  readonly logoUrl = "/logos/postnl.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=postnl.nl&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

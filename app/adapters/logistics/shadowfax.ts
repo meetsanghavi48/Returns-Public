@@ -42,7 +42,7 @@ export class ShadowfaxAdapter extends LogisticsAdapter {
   readonly key = "shadowfax";
   readonly displayName = "Shadowfax";
   readonly region = "IN";
-  readonly logoUrl = "/logos/shadowfax.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=shadowfax.in&sz=64";
   readonly meta: AdapterMeta = {
     qcSupport: true,
     contactEmail: "hello@shadowfax.in",

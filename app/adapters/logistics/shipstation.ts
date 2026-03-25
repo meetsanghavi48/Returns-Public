@@ -67,7 +67,7 @@ export class ShipStationAdapter extends LogisticsAdapter {
   readonly key = "shipstation";
   readonly displayName = "ShipStation";
   readonly region = "global";
-  readonly logoUrl = "/logos/shipstation.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=shipstation.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

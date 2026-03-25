@@ -11,7 +11,7 @@ export class HolisolAdapter extends LogisticsAdapter {
   readonly key = "holisol";
   readonly displayName = "Holisol";
   readonly region = "IN";
-  readonly logoUrl = "/logos/holisol.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=holisollogistics.com&sz=64";
   readonly credentialFields: CredentialField[] = [
     { key: "api_key", label: "API Key", type: "password", required: true, placeholder: "Enter your Holisol API key" },
     { key: "client_id", label: "Client ID", type: "text", required: true, placeholder: "Enter your client ID" },

@@ -47,7 +47,7 @@ export class IThinkAdapter extends LogisticsAdapter {
   readonly key = "ithink";
   readonly displayName = "iThink Logistics";
   readonly region = "IN";
-  readonly logoUrl = "/images/logistics/ithink.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=ithinklogistics.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

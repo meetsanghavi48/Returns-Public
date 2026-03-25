@@ -11,7 +11,7 @@ export class XpressbeesAdapter extends LogisticsAdapter {
   readonly key = "xpressbees";
   readonly displayName = "Xpressbees";
   readonly region = "IN";
-  readonly logoUrl = "/logos/xpressbees.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=xpressbees.com&sz=64";
   readonly credentialFields: CredentialField[] = [
     {
       key: "apiKey",

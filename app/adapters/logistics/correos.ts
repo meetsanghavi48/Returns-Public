@@ -11,7 +11,7 @@ export class CorreosAdapter extends LogisticsAdapter {
   readonly key = "correos";
   readonly displayName = "Correos";
   readonly region = "ES";
-  readonly logoUrl = "/logos/correos.svg";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=correos.es&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {

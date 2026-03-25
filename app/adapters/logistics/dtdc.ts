@@ -11,7 +11,7 @@ export class DtdcAdapter extends LogisticsAdapter {
   readonly key = "dtdc";
   readonly displayName = "DTDC";
   readonly region = "IN";
-  readonly logoUrl = "/logos/dtdc.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=dtdc.in&sz=64";
   readonly credentialFields: CredentialField[] = [
     {
       key: "apiKey",

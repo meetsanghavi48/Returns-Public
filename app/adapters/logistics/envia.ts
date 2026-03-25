@@ -11,7 +11,7 @@ export class EnviaAdapter extends LogisticsAdapter {
   readonly key = "envia";
   readonly displayName = "Envia";
   readonly region = "IN";
-  readonly logoUrl = "/logos/envia.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=envia.com&sz=64";
   readonly credentialFields: CredentialField[] = [
     { key: "api_key", label: "API Key", type: "password", required: true, placeholder: "Enter your Envia API key" },
     { key: "sender_id", label: "Sender ID", type: "text", required: true, placeholder: "Enter your sender ID" },

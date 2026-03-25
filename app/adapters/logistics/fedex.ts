@@ -86,7 +86,7 @@ export class FedExAdapter extends LogisticsAdapter {
   readonly key = "fedex";
   readonly displayName = "FedEx";
   readonly region = "global";
-  readonly logoUrl = "/logos/fedex.png";
+  readonly logoUrl = "https://www.google.com/s2/favicons?domain=fedex.com&sz=64";
 
   readonly credentialFields: CredentialField[] = [
     {
