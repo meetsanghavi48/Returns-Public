@@ -4,6 +4,7 @@ import { useLoaderData, useNavigate, useFetcher } from "@remix-run/react";
 import { useState, useCallback, useEffect } from "react";
 import prisma from "../db.server";
 import { shopifyREST } from "../services/shopify.server";
+import { getCurrencySymbol } from "~/utils/currency";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -230,6 +231,9 @@ export default function PortalExchange() {
       p.title.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
+  const currencyCode = data.currency || "USD";
+  const cs = getCurrencySymbol(currencyCode);
+
   const hasVariantSelected = !!selectedVariant[currentItem?.id];
 
   if (!currentItem) {
@@ -397,7 +401,7 @@ export default function PortalExchange() {
                 }}
               >
                 <strong>Selected:</strong>{" "}
-                {selectedVariant[currentItem.id].title} — ₹
+                {selectedVariant[currentItem.id].title} — {cs}
                 {selectedVariant[currentItem.id].price}
                 {parseFloat(selectedVariant[currentItem.id].price) !==
                   parseFloat(currentItem.price) && (
@@ -416,7 +420,7 @@ export default function PortalExchange() {
                     parseFloat(currentItem.price)
                       ? "+"
                       : ""}
-                    ₹
+                    {cs}
                     {(
                       parseFloat(selectedVariant[currentItem.id].price) -
                       parseFloat(currentItem.price)
@@ -492,7 +496,7 @@ export default function PortalExchange() {
                             marginTop: 4,
                           }}
                         >
-                          ₹{product.variants?.[0]?.price || "—"}
+                          {cs}{product.variants?.[0]?.price || "—"}
                         </div>
                       </div>
                     </div>
@@ -616,7 +620,7 @@ export default function PortalExchange() {
                     }}
                   >
                     <strong>Selected:</strong>{" "}
-                    {selectedVariant[currentItem.id].title} — ₹
+                    {selectedVariant[currentItem.id].title} — {cs}
                     {selectedVariant[currentItem.id].price}
                     {parseFloat(selectedVariant[currentItem.id].price) !==
                       parseFloat(currentItem.price) && (
@@ -635,7 +639,7 @@ export default function PortalExchange() {
                         parseFloat(currentItem.price)
                           ? "+"
                           : ""}
-                        ₹
+                        {cs}
                         {(
                           parseFloat(selectedVariant[currentItem.id].price) -
                           parseFloat(currentItem.price)

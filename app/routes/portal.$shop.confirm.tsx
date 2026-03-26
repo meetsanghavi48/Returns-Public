@@ -4,6 +4,7 @@ import { useLoaderData, Form, useActionData, useNavigation, useNavigate } from "
 import { useState, useMemo, useEffect, useCallback } from "react";
 import prisma from "../db.server";
 import { submitReturnRequest } from "../services/returns.server";
+import { getCurrencySymbol, formatAmount } from "~/utils/currency";
 
 // Fee calculation — pure function, no server imports
 function calculateFees(
@@ -240,11 +241,8 @@ export default function PortalConfirm() {
   const isExchangeOnly = hasExchange && !hasReturn;
 
   // Currency symbol from store
-  const currencyCode = data.currency || "INR";
-  const currencySymbol: Record<string, string> = {
-    INR: "₹", USD: "$", EUR: "€", GBP: "£", AUD: "A$", CAD: "C$", JPY: "¥", SGD: "S$", AED: "AED ",
-  };
-  const cs = currencySymbol[currencyCode] || currencyCode + " ";
+  const currencyCode = data.currency || "USD";
+  const cs = getCurrencySymbol(currencyCode);
 
   // Calculate fees from policy settings
   const fees = data.fees || { restockingFee: 0, returnShippingFee: 0, exchangeShippingFee: 0, taxRate: 0 };
@@ -315,29 +313,29 @@ export default function PortalConfirm() {
           <div style={{ marginTop: 12, borderTop: "1px solid var(--portal-border)", paddingTop: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 4 }}>
               <span>Item total</span>
-              <span>{cs}{feeBreakdown.itemTotal.toLocaleString("en-IN")}</span>
+              <span>{cs}{formatAmount(feeBreakdown.itemTotal, currencyCode)}</span>
             </div>
             {feeBreakdown.restockingFee > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 4, color: "var(--portal-accent)" }}>
                 <span>Restocking fee ({fees.restockingFee}%)</span>
-                <span>- {cs}{feeBreakdown.restockingFee.toLocaleString("en-IN")}</span>
+                <span>- {cs}{formatAmount(feeBreakdown.restockingFee, currencyCode)}</span>
               </div>
             )}
             {feeBreakdown.shippingFee > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 4, color: "var(--portal-accent)" }}>
                 <span>Shipping fee</span>
-                <span>- {cs}{feeBreakdown.shippingFee.toLocaleString("en-IN")}</span>
+                <span>- {cs}{formatAmount(feeBreakdown.shippingFee, currencyCode)}</span>
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 700, marginTop: 8, borderTop: "1px solid var(--portal-border)", paddingTop: 8 }}>
               <span>Refund amount</span>
-              <span>{cs}{feeBreakdown.refundAmount.toLocaleString("en-IN")}</span>
+              <span>{cs}{formatAmount(feeBreakdown.refundAmount, currencyCode)}</span>
             </div>
           </div>
         )}
         {!hasReturn && (
           <div style={{ textAlign: "right", fontWeight: 700, margin: "12px 0", fontSize: 16 }}>
-            Total: {cs}{totalAmount.toLocaleString("en-IN")}
+            Total: {cs}{formatAmount(totalAmount, currencyCode)}
           </div>
         )}
       </div>
@@ -349,11 +347,11 @@ export default function PortalConfirm() {
           <button className="nudge-dismiss" onClick={() => setCreditNudgeDismissed(true)}>×</button>
           <div className="nudge-title">Get MORE back with Store Credit!</div>
           <div className="nudge-amount-comparison">
-            <span>Refund: {cs}{feeBreakdown.refundAmount.toLocaleString("en-IN")}</span>
+            <span>Refund: {cs}{formatAmount(feeBreakdown.refundAmount, currencyCode)}</span>
             {Number(nudgeStoreCreditBonus) > 0 && (
               <>
                 <span>→</span>
-                <span style={{ fontWeight: 700 }}>Store credit: {cs}{(feeBreakdown.refundAmount + Number(nudgeStoreCreditBonus)).toLocaleString("en-IN")}</span>
+                <span style={{ fontWeight: 700 }}>Store credit: {cs}{formatAmount(feeBreakdown.refundAmount + Number(nudgeStoreCreditBonus), currencyCode)}</span>
                 <span className="nudge-bonus">+{cs}{Number(nudgeStoreCreditBonus)} BONUS</span>
               </>
             )}

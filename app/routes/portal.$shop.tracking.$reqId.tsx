@@ -2,6 +2,8 @@ import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, Link } from "@remix-run/react";
 import prisma from "../db.server";
+import { shopifyREST } from "../services/shopify.server";
+import { getCurrencySymbol, formatAmount } from "~/utils/currency";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   const shopDomain = params.shop!;
@@ -13,7 +15,17 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 
   if (!request) throw new Response("Request not found", { status: 404 });
 
-  return json({ request, shop: shopDomain });
+  // Fetch shop currency
+  let currency = "USD";
+  try {
+    const shopRecord = await prisma.shop.findUnique({ where: { shop: shopDomain } });
+    if (shopRecord?.accessToken) {
+      const shopInfo = await shopifyREST(shopDomain, shopRecord.accessToken, "GET", "shop.json?fields=currency");
+      currency = shopInfo?.shop?.currency || "USD";
+    }
+  } catch { /* fallback to USD */ }
+
+  return json({ request, shop: shopDomain, currency });
 };
 
 const STATUS_STEPS = [
@@ -40,8 +52,9 @@ function getStatusIndex(status: string, steps: typeof STATUS_STEPS) {
 }
 
 export default function PortalTracking() {
-  const { request, shop } = useLoaderData<typeof loader>();
+  const { request, shop, currency } = useLoaderData<typeof loader>();
   const r = request as any;
+  const cs = getCurrencySymbol(currency || "USD");
   const items = (r.items || []) as any[];
 
   const isExchange = r.requestType === "exchange";
@@ -140,7 +153,7 @@ export default function PortalTracking() {
                 <span style={{ textTransform: "capitalize" }}>{item.action}</span>
               </div>
             </div>
-            <div className="portal-item-price">₹{item.price}</div>
+            <div className="portal-item-price">{cs}{item.price}</div>
           </div>
         ))}
       </div>
@@ -173,7 +186,7 @@ export default function PortalTracking() {
         <div className="portal-card">
           <h3>Refund</h3>
           <div style={{ fontSize: 14, marginTop: 8 }}>
-            <strong>Amount:</strong> ₹{Number(r.refundAmount).toLocaleString("en-IN")}
+            <strong>Amount:</strong> {cs}{formatAmount(Number(r.refundAmount), currency || "USD")}
             <br />
             <strong>Method:</strong>{" "}
             {r.refundMethod === "store_credit" ? "Store Credit" : "Original Payment"}

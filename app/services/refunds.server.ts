@@ -169,7 +169,7 @@ export async function processRefund(
               id: request.orderId,
               note: (
                 en +
-                `\n[STORE CREDIT] Code:${code} ₹${total} REQ:${request.reqId} ${new Date().toISOString()}`
+                `\n[STORE CREDIT] Code:${code} ${total} REQ:${request.reqId} ${new Date().toISOString()}`
               ).slice(0, 5000),
             },
           },
@@ -210,7 +210,7 @@ export async function processRefund(
         request.reqId,
         "store_credit_auto",
         "system",
-        `${code} ₹${total}`,
+        `${code} Amount: ${total}`,
       );
       return { code, amount: total, method: "store_credit" };
     }
@@ -258,7 +258,7 @@ export async function processRefund(
         request.reqId,
         "refunded_original",
         "system",
-        `₹${amount} to original payment`,
+        `${amount} to original payment`,
       );
       return { refund_id: result.refund.id, amount, method: "original" };
     }

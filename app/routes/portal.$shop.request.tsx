@@ -3,6 +3,7 @@ import { json, redirect } from "@remix-run/node";
 import { useLoaderData, useNavigate } from "@remix-run/react";
 import { useState, useCallback } from "react";
 import prisma from "../db.server";
+import { getCurrencySymbol } from "~/utils/currency";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -139,7 +140,7 @@ export default function PortalRequest() {
           const blockedExchange = isItemBlockedForExchange(item);
           const blockedBoth = blockedReturn && blockedExchange;
           const isDisabled = alreadyReturned || blockedBoth;
-          const cs = order.currency ? ({INR:"₹",USD:"$",EUR:"€",GBP:"£"} as Record<string,string>)[order.currency] || order.currency+" " : "₹";
+          const cs = getCurrencySymbol(order.currency || "USD");
           return (
             <div key={item.id}>
               <div

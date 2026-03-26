@@ -33,8 +33,8 @@ export const CONDITION_TYPES = [
     options: [{ label: "Prepaid", value: "prepaid" }, { label: "COD", value: "cod" }] },
   { key: "order_tags", label: "Order Tags", operators: ["contains", "does_not_contain"], valueType: "text" as const },
   { key: "product_tags", label: "Product Tags", operators: ["contains", "does_not_contain"], valueType: "text" as const },
-  { key: "order_value", label: "Order Value (₹)", operators: ["greater_than", "less_than", "equals"], valueType: "number" as const },
-  { key: "return_value", label: "Return Item Value (₹)", operators: ["greater_than", "less_than", "equals"], valueType: "number" as const },
+  { key: "order_value", label: "Order Value", operators: ["greater_than", "less_than", "equals"], valueType: "number" as const },
+  { key: "return_value", label: "Return Item Value", operators: ["greater_than", "less_than", "equals"], valueType: "number" as const },
   { key: "item_count", label: "Number of Items", operators: ["greater_than", "less_than", "equals"], valueType: "number" as const },
   { key: "requested_refund_mode", label: "Refund Method", operators: ["is", "is_not"], valueType: "select" as const,
     options: [

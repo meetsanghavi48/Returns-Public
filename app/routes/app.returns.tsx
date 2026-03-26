@@ -6,6 +6,7 @@ import { requireAppAuth } from "../services/app-auth.server";
 import prisma from "../db.server";
 import { approveRequest, rejectRequest } from "../services/returns.server";
 import { shopifyREST } from "../services/shopify.server";
+import { getCurrencySymbol, formatCurrency, formatAmount } from "~/utils/currency";
 
 const STATUS_TABS = [
   { id: "all", label: "All" },
@@ -159,8 +160,7 @@ function statusLabel(s: string) {
 
 export default function AdminReturns() {
   const { returns, counts, status, q, currency, reasons, activeFilters, datePreset } = useLoaderData<typeof loader>();
-  const currencySymbols: Record<string, string> = { INR: "\u20B9", USD: "$", EUR: "\u20AC", GBP: "\u00A3", AUD: "A$", CAD: "C$", JPY: "\u00A5" };
-  const cs = currencySymbols[currency] || currency + " ";
+  const cs = getCurrencySymbol(currency);
   const navigate = useNavigate();
   const submit = useSubmit();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -412,7 +412,7 @@ export default function AdminReturns() {
                       <td><span className={`admin-badge ${r.requestType}`}>{r.requestType}</span></td>
                       <td><span className={`admin-badge ${r.status}`}>{statusLabel(r.status)}</span></td>
                       <td>{items.length} item{items.length !== 1 ? "s" : ""}</td>
-                      <td>{cs}{Number(r.totalPrice).toLocaleString("en-IN")}</td>
+                      <td>{cs}{formatAmount(Number(r.totalPrice), currency)}</td>
                       <td>{new Date(r.createdAt).toLocaleDateString("en-IN")}</td>
                     </tr>
                   );

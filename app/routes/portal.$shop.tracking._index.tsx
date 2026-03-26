@@ -2,14 +2,26 @@ import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, useActionData, Form, Link, useNavigation } from "@remix-run/react";
 import prisma from "../db.server";
+import { shopifyREST } from "../services/shopify.server";
+import { getCurrencySymbol, formatAmount } from "~/utils/currency";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const email = url.searchParams.get("email");
   const shop = params.shop!;
 
+  // Fetch shop currency
+  let currency = "USD";
+  try {
+    const shopRecord = await prisma.shop.findUnique({ where: { shop } });
+    if (shopRecord?.accessToken) {
+      const shopInfo = await shopifyREST(shop, shopRecord.accessToken, "GET", "shop.json?fields=currency");
+      currency = shopInfo?.shop?.currency || "USD";
+    }
+  } catch { /* fallback to USD */ }
+
   if (!email) {
-    return json({ requests: null, email: null, shop });
+    return json({ requests: null, email: null, shop, currency });
   }
 
   const requests = await prisma.returnRequest.findMany({
@@ -20,7 +32,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     orderBy: { submittedAt: "desc" },
   });
 
-  return json({ requests, email, shop });
+  return json({ requests, email, shop, currency });
 };
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
@@ -83,6 +95,8 @@ export default function PortalTrackingList() {
   const navigation = useNavigation();
   const isLoading = navigation.state === "submitting";
   const shop = loaderData.shop;
+  const currency = loaderData.currency || "USD";
+  const cs = getCurrencySymbol(currency);
 
   const requests = actionData?.requests || loaderData.requests;
   const error = actionData?.error;
@@ -179,7 +193,7 @@ export default function PortalTrackingList() {
                     <div style={{ fontSize: 12, color: "var(--portal-text-muted)", display: "flex", gap: 12, flexWrap: "wrap" }}>
                       <span style={{ textTransform: "capitalize" }}>{r.requestType || "return"}</span>
                       <span>{itemCount} item{itemCount > 1 ? "s" : ""}</span>
-                      <span>₹{totalAmount.toLocaleString("en-IN")}</span>
+                      <span>{cs}{formatAmount(totalAmount, currency)}</span>
                       <span>{new Date(r.submittedAt).toLocaleDateString("en-IN")}</span>
                     </div>
                   </div>

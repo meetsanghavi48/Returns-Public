@@ -294,7 +294,7 @@ async function executeAction(
             },
           });
         } catch { /* gift card API may require Plus plan */ }
-        await auditLog(shop, data.orderId, data.reqId, "automation_store_credit", "system", `Issued ₹${creditAmount.toFixed(2)} store credit`);
+        await auditLog(shop, data.orderId, data.reqId, "automation_store_credit", "system", `Issued ${creditAmount.toFixed(2)} store credit`);
         return { success: true };
       }
 
@@ -425,17 +425,17 @@ export const DEFAULT_RULES = [
   },
   {
     name: "Auto Approve Low Value Return",
-    description: "Auto approve and refund returns under ₹500",
+    description: "Auto approve and refund returns under 500",
     matchType: "ALL",
     conditions: [{ type: "return_value", operator: "less_than", value: 500 }],
     actions: [{ type: "auto_approve" }, { type: "process_refund", config: { refund_method: "original" } }],
   },
   {
     name: "Flag High Value Return",
-    description: "Flag returns over ₹5000 for manual review",
+    description: "Flag returns over 5000 for manual review",
     matchType: "ALL",
     conditions: [{ type: "return_value", operator: "greater_than", value: 5000 }],
-    actions: [{ type: "flag_for_review", config: { reason: "High value return" } }, { type: "send_email_to_merchant", config: { subject: "High value return flagged", message: "A return over ₹5000 needs review." } }],
+    actions: [{ type: "flag_for_review", config: { reason: "High value return" } }, { type: "send_email_to_merchant", config: { subject: "High value return flagged", message: "A return over 5000 needs review." } }],
   },
   {
     name: "Auto Reject Ineligible Tags",

@@ -143,7 +143,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
   // Get store currency
   const shopInfo = await shopifyREST(shopDomain, shopRecord.accessToken, "GET", "shop.json?fields=currency");
-  const currency = shopInfo?.shop?.currency || "INR";
+  const currency = shopInfo?.shop?.currency || "USD";
 
   // Calculate days since order
   const orderDate = new Date(order.created_at);

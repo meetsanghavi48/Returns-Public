@@ -3,9 +3,11 @@ import { json } from "@remix-run/node";
 import { useLoaderData, Link } from "@remix-run/react";
 import { requireAdminAuth } from "../services/admin-session.server";
 import prisma from "../db.server";
+import { shopifyREST } from "../services/shopify.server";
+import { getCurrencySymbol, formatCurrency, formatAmount } from "~/utils/currency";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { shop } = await requireAdminAuth(request);
+  const { shop, accessToken } = await requireAdminAuth(request);
 
   const [total, pending, approved, refunded, exchanged, rejected] =
     await Promise.all([
@@ -32,7 +34,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     0,
   );
 
-  return json({ stats: { total, pending, approved, refunded, exchanged, rejected }, recent, revenueAtRisk });
+  let currency = "USD";
+  try {
+    const shopInfo = await shopifyREST(shop, accessToken, "GET", "shop.json?fields=currency");
+    currency = shopInfo?.shop?.currency || "USD";
+  } catch {}
+
+  return json({ stats: { total, pending, approved, refunded, exchanged, rejected }, recent, revenueAtRisk, currency });
 };
 
 function getReturnId(r: any) {
@@ -42,7 +50,8 @@ function getReturnId(r: any) {
 }
 
 export default function AdminDashboard() {
-  const { stats, recent, revenueAtRisk } = useLoaderData<typeof loader>();
+  const { stats, recent, revenueAtRisk, currency } = useLoaderData<typeof loader>();
+  const cs = getCurrencySymbol(currency);
 
   return (
     <>
@@ -68,7 +77,7 @@ export default function AdminDashboard() {
         </div>
         <div className="admin-stat-card">
           <div className="admin-stat-label">Revenue at Risk</div>
-          <div className="admin-stat-value danger">₹{revenueAtRisk.toLocaleString("en-IN")}</div>
+          <div className="admin-stat-value danger">{formatCurrency(revenueAtRisk, currency)}</div>
         </div>
         <div className="admin-stat-card">
           <div className="admin-stat-label">Refunded</div>
@@ -113,7 +122,7 @@ export default function AdminDashboard() {
                   <td>{r.customerName || "—"}</td>
                   <td><span className={`admin-badge ${r.requestType}`}>{r.requestType}</span></td>
                   <td><span className={`admin-badge ${r.status}`}>{statusLabel(r.status)}</span></td>
-                  <td>₹{Number(r.totalPrice).toLocaleString("en-IN")}</td>
+                  <td>{formatCurrency(Number(r.totalPrice), currency)}</td>
                   <td>{new Date(r.createdAt).toLocaleDateString("en-IN")}</td>
                 </tr>
               ))}

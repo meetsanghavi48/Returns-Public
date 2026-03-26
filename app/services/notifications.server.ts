@@ -135,7 +135,7 @@ export async function sendStatusUpdate(
     pickup_scheduled: `A pickup has been scheduled. AWB: ${ret.awb || "pending"}`,
     in_transit: "Your return package is in transit.",
     delivered: "Your return package has been received at our warehouse.",
-    refunded: `Your refund of ₹${ret.refundAmount || 0} has been processed.`,
+    refunded: `Your refund of ${ret.refundAmount || 0} has been processed.`,
     exchanged: `Your exchange order ${ret.exchangeOrderName || ""} has been created.`,
   };
 

@@ -11,6 +11,7 @@ import { createDelhiveryPickup } from "../services/delhivery.server";
 import { auditLog } from "../services/audit.server";
 import { shopifyREST } from "../services/shopify.server";
 import { getSetting } from "../services/settings.server";
+import { getCurrencySymbol, formatCurrency, formatAmount } from "~/utils/currency";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { shop, accessToken } = await requireAdminAuth(request);
@@ -229,8 +230,7 @@ function timeAgo(date: string) {
 
 export default function AdminReturnDetail() {
   const { returnReq, auditLogs, orderRequests, orderDetails, returnShippingFee, restockingFeePct, taxRatePct, currency } = useLoaderData<typeof loader>();
-  const currencySymbols: Record<string, string> = { INR: "₹", USD: "$", EUR: "€", GBP: "£", AUD: "A$", CAD: "C$", JPY: "¥", SGD: "S$", AED: "AED " };
-  const cs = currencySymbols[currency] || currency + " ";
+  const cs = getCurrencySymbol(currency);
   const actionData = useActionData<any>();
   const submit = useSubmit();
   const navigation = useNavigation();
@@ -504,7 +504,7 @@ export default function AdminReturnDetail() {
                       <div>
                         <div className="dp-exchange-name">{item.title}</div>
                         <div className="dp-exchange-variant">{item.variant_title || "Default"}</div>
-                        <div className="dp-exchange-price">{cs}{parseFloat(item.price).toLocaleString("en-IN")} × {item.qty || 1}</div>
+                        <div className="dp-exchange-price">{cs}{formatAmount(parseFloat(item.price), currency)} × {item.qty || 1}</div>
                         {item.reason && <span className="dp-reason-badge">{item.reason}</span>}
                       </div>
                     </div>
@@ -546,8 +546,8 @@ export default function AdminReturnDetail() {
                     {item.reason && <span className="dp-reason-badge">{item.reason}</span>}
                   </div>
                   <div className="admin-item-price">
-                    {cs}{parseFloat(item.price).toLocaleString("en-IN")} × {item.qty || 1}
-                    <div style={{ fontWeight: 700, marginTop: 2 }}>{cs}{(parseFloat(item.price) * (parseInt(item.qty) || 1)).toLocaleString("en-IN")}</div>
+                    {cs}{formatAmount(parseFloat(item.price), currency)} × {item.qty || 1}
+                    <div style={{ fontWeight: 700, marginTop: 2 }}>{cs}{formatAmount(parseFloat(item.price) * (parseInt(item.qty) || 1), currency)}</div>
                   </div>
                 </div>
               ))}
@@ -604,7 +604,7 @@ export default function AdminReturnDetail() {
                   <hr className="admin-divider" />
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontWeight: 600 }}>Refunded</span>
-                    <span style={{ fontWeight: 700, color: "var(--admin-success)" }}>{cs}{Number(r.refundAmount).toLocaleString("en-IN")}</span>
+                    <span style={{ fontWeight: 700, color: "var(--admin-success)" }}>{cs}{formatAmount(Number(r.refundAmount), currency)}</span>
                   </div>
                   {r.utrNumber ? (
                     <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
@@ -809,7 +809,7 @@ export default function AdminReturnDetail() {
             <table className="dp-info-table">
               <tbody>
                 <tr><td>Order #</td><td>{r.orderNumber}</td></tr>
-                <tr><td>Order Total</td><td>{cs}{parseFloat(orderTotal).toLocaleString("en-IN")}</td></tr>
+                <tr><td>Order Total</td><td>{cs}{formatAmount(parseFloat(orderTotal), currency)}</td></tr>
                 <tr><td>Payment</td><td><span className={`admin-badge ${financialStatus === "paid" ? "delivered" : "pending"}`}>{financialStatus}</span></td></tr>
                 <tr><td>Type</td><td>{r.isCod ? <span className="admin-badge pending">COD</span> : "Prepaid"}</td></tr>
               </tbody>

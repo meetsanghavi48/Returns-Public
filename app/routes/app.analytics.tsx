@@ -4,6 +4,8 @@ import { useLoaderData, useSearchParams } from "@remix-run/react";
 import { useCallback } from "react";
 import { requireAppAuth } from "../services/app-auth.server";
 import prisma from "../db.server";
+import { shopifyREST } from "../services/shopify.server";
+import { getCurrencySymbol, formatCurrency, formatAmount } from "~/utils/currency";
 
 const DATE_OPTIONS = [
   { id: "today", label: "Today", days: 0 },
@@ -38,7 +40,7 @@ function getDateRange(preset: string): { start: Date; end: Date; prevStart: Date
 }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { shop } = await requireAppAuth(request);
+  const { shop, accessToken } = await requireAppAuth(request);
   const url = new URL(request.url);
   const period = url.searchParams.get("period") || "30days";
   const typeFilter = url.searchParams.get("type") || "both";
@@ -153,9 +155,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
   }
 
+  let currency = "USD";
+  try {
+    const shopInfo = await shopifyREST(shop, accessToken, "GET", "shop.json?fields=currency");
+    currency = shopInfo?.shop?.currency || "USD";
+  } catch {}
+
   return json({
     period,
     typeFilter,
+    currency,
     stats: {
       currentCount, prevCount,
       currentValue, prevValue,
@@ -207,7 +216,8 @@ export default function AdminAnalytics() {
     setSearchParams(params);
   }, [searchParams, setSearchParams]);
 
-  const { stats } = data;
+  const { stats, currency } = data;
+  const cs = getCurrencySymbol(currency);
   const totalReasons = data.topReasons.reduce((s, [, c]) => s + c, 0);
   const totalProducts = data.topProducts.reduce((s, [, c]) => s + c, 0);
   const totalPayment = data.prepaidCount + data.codCount;
@@ -247,7 +257,7 @@ export default function AdminAnalytics() {
         <div className="admin-stat-card">
           <div className="admin-stat-label">Requests value</div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <div className="admin-stat-value">{"\u20B9"}{stats.currentValue.toLocaleString("en-IN")}</div>
+            <div className="admin-stat-value">{cs}{formatAmount(stats.currentValue, currency)}</div>
             <span style={{ fontSize: 13, fontWeight: 600, color: pctColor(stats.currentValue, stats.prevValue) }}>
               {pctChange(stats.currentValue, stats.prevValue)}
             </span>
@@ -256,7 +266,7 @@ export default function AdminAnalytics() {
         <div className="admin-stat-card">
           <div className="admin-stat-label">Revenue saved</div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <div className="admin-stat-value success">{"\u20B9"}{stats.revenueSaved.toLocaleString("en-IN")}</div>
+            <div className="admin-stat-value success">{cs}{formatAmount(stats.revenueSaved, currency)}</div>
             <span style={{ fontSize: 13, fontWeight: 600, color: pctColor(stats.revenueSaved, stats.prevRevenueSaved) }}>
               {pctChange(stats.revenueSaved, stats.prevRevenueSaved)}
             </span>
@@ -276,7 +286,7 @@ export default function AdminAnalytics() {
         </div>
         <div className="admin-stat-card">
           <div className="admin-stat-label">Refund Total</div>
-          <div className="admin-stat-value">{"\u20B9"}{Object.values(data.refundModes).reduce((s, m) => s + m.amount, 0).toLocaleString("en-IN")}</div>
+          <div className="admin-stat-value">{cs}{formatAmount(Object.values(data.refundModes).reduce((s, m) => s + m.amount, 0), currency)}</div>
         </div>
         <div className="admin-stat-card">
           <div className="admin-stat-label">Exchanges</div>
@@ -355,7 +365,7 @@ export default function AdminAnalytics() {
             {Object.entries(data.refundModes).length === 0 ? <p style={{ color: "#999", fontSize: 13 }}>No data</p> : Object.entries(data.refundModes).map(([mode, info]) => (
               <div key={mode} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f5f5f5" }}>
                 <span style={{ fontSize: 13, fontWeight: 500, textTransform: "capitalize" }}>{mode.replace(/_/g, " ")}</span>
-                <span style={{ fontSize: 13 }}>{info.count} | {"\u20B9"}{info.amount.toLocaleString("en-IN")}</span>
+                <span style={{ fontSize: 13 }}>{info.count} | {cs}{formatAmount(info.amount, currency)}</span>
               </div>
             ))}
           </div>
@@ -433,7 +443,7 @@ export default function AdminAnalytics() {
                   <td style={{ fontWeight: 500 }}>{c.email}</td>
                   <td>{c.orders}</td>
                   <td>{c.requests}</td>
-                  <td>{"\u20B9"}{c.value.toLocaleString("en-IN")}</td>
+                  <td>{cs}{formatAmount(c.value, currency)}</td>
                 </tr>
               ))}
             </tbody>

@@ -161,7 +161,7 @@ export async function submitReturnRequest(
         data.existingRequestId,
         "items_appended",
         "customer",
-        `Added ${items.length} items | New total: ₹${mergedTotal}`,
+        `Added ${items.length} items | New total: ${mergedTotal}`,
       );
 
       return data.existingRequestId;
@@ -215,7 +215,7 @@ export async function submitReturnRequest(
     reqId,
     "request_submitted",
     "customer",
-    `${requestType} | ${items.length} items | ₹${totalPrice}`,
+    `${requestType} | ${items.length} items | ${totalPrice}`,
   );
 
   // Auto-approve if enabled

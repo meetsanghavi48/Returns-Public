@@ -588,7 +588,7 @@ export default function GeneralSettings() {
             </div>
             <div className="admin-form-row">
               <div className="admin-form-group">
-                <label className="admin-label">Return Shipping Fee (₹)</label>
+                <label className="admin-label">Return Shipping Fee</label>
                 <input className="admin-input" type="number" value={form.return_shipping_fee} onChange={(e) => u("return_shipping_fee", e.target.value)} />
               </div>
               <div className="admin-form-group">

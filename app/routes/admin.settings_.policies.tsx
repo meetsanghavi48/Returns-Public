@@ -177,11 +177,11 @@ export default function PoliciesSettings() {
 
           <div className="admin-form-row" style={{ marginBottom: 16 }}>
             <div className="admin-form-group">
-              <label className="admin-label">Min order value (₹)</label>
+              <label className="admin-label">Min order value</label>
               <input className="admin-input" type="number" value={form.restrict_return_min_value} onChange={(e) => u("restrict_return_min_value", e.target.value)} placeholder="No minimum" />
             </div>
             <div className="admin-form-group">
-              <label className="admin-label">Max order value (₹)</label>
+              <label className="admin-label">Max order value</label>
               <input className="admin-input" type="number" value={form.restrict_return_max_value} onChange={(e) => u("restrict_return_max_value", e.target.value)} placeholder="No maximum" />
             </div>
           </div>
@@ -222,11 +222,11 @@ export default function PoliciesSettings() {
 
           <div className="admin-form-row" style={{ marginBottom: 16 }}>
             <div className="admin-form-group">
-              <label className="admin-label">Min order value (₹)</label>
+              <label className="admin-label">Min order value</label>
               <input className="admin-input" type="number" value={form.restrict_exchange_min_value} onChange={(e) => u("restrict_exchange_min_value", e.target.value)} placeholder="No minimum" />
             </div>
             <div className="admin-form-group">
-              <label className="admin-label">Max order value (₹)</label>
+              <label className="admin-label">Max order value</label>
               <input className="admin-input" type="number" value={form.restrict_exchange_max_value} onChange={(e) => u("restrict_exchange_max_value", e.target.value)} placeholder="No maximum" />
             </div>
           </div>
@@ -318,7 +318,7 @@ export default function PoliciesSettings() {
           </label>
           {form.capture_payment_price_diff && (
             <div className="admin-form-group" style={{ marginTop: 8 }}>
-              <label className="admin-label">Minimum amount to charge (₹)</label>
+              <label className="admin-label">Minimum amount to charge</label>
               <input className="admin-input" type="number" value={form.capture_payment_min_amount} onChange={(e) => u("capture_payment_min_amount", e.target.value)} style={{ width: 150 }} />
             </div>
           )}
