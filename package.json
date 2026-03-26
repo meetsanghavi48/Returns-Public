@@ -13,7 +13,13 @@
     "setup": "prisma generate && prisma migrate deploy",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:sandbox": "vitest run tests/sandbox/ --reporter=verbose",
+    "test:sandbox:payments": "vitest run tests/sandbox/payments/ --reporter=verbose",
+    "test:sandbox:logistics": "vitest run tests/sandbox/logistics/ --reporter=verbose",
+    "test:sandbox:flows": "vitest run tests/sandbox/full-flow/ --reporter=verbose",
+    "test:sandbox:report": "npx tsx tests/sandbox/run-report.ts",
+    "test:sandbox:quick": "vitest run tests/sandbox/payments/payu.sandbox.test.ts tests/sandbox/full-flow/real-orders.sandbox.test.ts --reporter=verbose"
   },
   "dependencies": {
     "@prisma/client": "^5.19.0",
