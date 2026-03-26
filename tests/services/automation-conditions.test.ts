@@ -23,6 +23,10 @@ vi.mock("~/services/audit.server", () => ({ auditLog: vi.fn() }));
 vi.mock("~/services/notifications.server", () => ({ sendReturnConfirmation: vi.fn(), sendStatusUpdate: vi.fn() }));
 vi.mock("~/services/email-templates.server", () => ({ sendNotification: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("~/services/refunds.server", () => ({ processRefund: vi.fn() }));
+vi.mock("~/services/logistics.server", () => ({
+  getDefaultLogisticsForShop: vi.fn().mockResolvedValue(null),
+  createPickupForReturn: vi.fn(),
+}));
 
 const makeReturn = (overrides: any = {}) => ({
   id: "ret-1", reqId: "RET-001", shop: "shop.com", orderId: "ord-1",

@@ -30,6 +30,10 @@ vi.mock("~/services/notifications.server", () => ({
   sendReturnConfirmation: vi.fn(),
   sendStatusUpdate: vi.fn(),
 }));
+vi.mock("~/services/logistics.server", () => ({
+  getDefaultLogisticsForShop: vi.fn().mockResolvedValue(null),
+  createPickupForReturn: vi.fn(),
+}));
 
 describe("returns.server", () => {
   let prisma: any;
