@@ -103,6 +103,34 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         });
         await auditLog(shop, null, reqId, "unarchived", "admin", "");
         return json({ ok: true, message: "Unarchived" });
+      case "self_ship": {
+        const trackingUrl = (formData.get("trackingUrl") as string) || "";
+        const carrierName = (formData.get("carrierName") as string) || "";
+        if (!trackingUrl) return json({ error: "Tracking link is required" }, { status: 400 });
+        await prisma.returnRequest.update({
+          where: { reqId, shop },
+          data: {
+            trackingUrl,
+            carrierName: carrierName || null,
+            awb: "SELF-SHIP",
+            awbStatus: "Self Ship",
+            status: "in_transit",
+          },
+        });
+        await prisma.returnEvent.create({
+          data: {
+            shop,
+            returnId: (await prisma.returnRequest.findFirst({ where: { reqId, shop }, select: { id: true } }))!.id,
+            type: "self_ship_added",
+            status: "in_transit",
+            message: `Self-ship tracking added. Carrier: ${carrierName || "N/A"}`,
+            actor: "admin",
+            metadata: { trackingUrl, carrierName } as any,
+          },
+        });
+        await auditLog(shop, null, reqId, "self_ship_added", "admin", `Tracking: ${trackingUrl}`);
+        return json({ ok: true, message: "Self-ship tracking saved. Return moved to In Transit." });
+      }
       case "attach_awb": {
         const awb = formData.get("awb") as string;
         if (!awb) return json({ error: "AWB required" }, { status: 400 });
@@ -169,6 +197,9 @@ export default function AdminReturnDetail() {
   const isLoading = navigation.state === "submitting";
   const [awbInput, setAwbInput] = useState("");
   const [utrInput, setUtrInput] = useState("");
+  const [showSelfShip, setShowSelfShip] = useState(false);
+  const [selfShipUrl, setSelfShipUrl] = useState("");
+  const [selfShipCarrier, setSelfShipCarrier] = useState("");
 
   // Redirect on delete
   if (actionData?.redirect) {
@@ -292,7 +323,65 @@ export default function AdminReturnDetail() {
             </div>
 
             {/* Shipment info */}
-            {r.awb ? (
+            {r.awb === "SELF-SHIP" && r.trackingUrl ? (
+              <div style={{ position: "relative" }}>
+                <div className="dp-shipment-grid">
+                  <div>
+                    <div className="dp-shipment-label">Shipping Method</div>
+                    <div className="dp-shipment-value">📦 Self Ship</div>
+                  </div>
+                  <div>
+                    <div className="dp-shipment-label">Carrier</div>
+                    <div className="dp-shipment-value">{r.carrierName || "Not specified"}</div>
+                  </div>
+                  <div>
+                    <div className="dp-shipment-label">Tracking</div>
+                    <div className="dp-shipment-value">
+                      <a href={r.trackingUrl} target="_blank" rel="noreferrer" style={{ color: "var(--admin-accent)" }}>
+                        View Tracking →
+                      </a>
+                    </div>
+                  </div>
+                  <div>
+                    <button className="admin-btn admin-btn-sm" onClick={() => { setSelfShipUrl(r.trackingUrl || ""); setSelfShipCarrier(r.carrierName || ""); setShowSelfShip(true); }}>
+                      🔄 Update Tracking
+                    </button>
+                  </div>
+                </div>
+                {showSelfShip && (
+                  <div className="self-ship-popup">
+                    <div style={{ fontWeight: 600, marginBottom: 12 }}>Customer Self-Ship Details</div>
+                    <label className="admin-label">Tracking Link</label>
+                    <input
+                      className="admin-input"
+                      type="url"
+                      placeholder="https://tracking.example.com/ABC123"
+                      value={selfShipUrl}
+                      onChange={(e) => setSelfShipUrl(e.target.value)}
+                      style={{ width: "100%", marginBottom: 10 }}
+                    />
+                    <label className="admin-label">Carrier Name <span style={{ color: "var(--admin-text-muted)", fontWeight: 400 }}>(optional)</span></label>
+                    <input
+                      className="admin-input"
+                      placeholder="e.g. India Post, DTDC, Customer dropped off"
+                      value={selfShipCarrier}
+                      onChange={(e) => setSelfShipCarrier(e.target.value)}
+                      style={{ width: "100%", marginBottom: 14 }}
+                    />
+                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                      <button className="admin-btn admin-btn-sm" onClick={() => setShowSelfShip(false)}>Cancel</button>
+                      <button
+                        className="admin-btn admin-btn-primary admin-btn-sm"
+                        disabled={!selfShipUrl || isLoading}
+                        onClick={() => { doAction("self_ship", { trackingUrl: selfShipUrl, carrierName: selfShipCarrier }); setShowSelfShip(false); }}
+                      >
+                        Save Tracking
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : r.awb && r.awb !== "SELF-SHIP" ? (
               <div className="dp-shipment-grid">
                 <div>
                   <div className="dp-shipment-label">Shipment Status</div>
@@ -313,12 +402,49 @@ export default function AdminReturnDetail() {
                 </div>
               </div>
             ) : isApproved ? (
-              <div style={{ marginTop: 16, display: "flex", gap: 8, alignItems: "center" }}>
-                <input className="admin-input" placeholder="Enter AWB manually" value={awbInput} onChange={(e) => setAwbInput(e.target.value)} style={{ flex: 1 }} />
-                <button className="admin-btn admin-btn-sm" onClick={() => doAction("attach_awb", { awb: awbInput })} disabled={!awbInput}>Set</button>
-                <button className="admin-btn admin-btn-primary admin-btn-sm" onClick={() => doAction("create_pickup")} disabled={isLoading}>
-                  🚚 Create Pickup
-                </button>
+              <div style={{ marginTop: 16, position: "relative" }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input className="admin-input" placeholder="Enter AWB manually" value={awbInput} onChange={(e) => setAwbInput(e.target.value)} style={{ flex: 1 }} />
+                  <button className="admin-btn admin-btn-sm" onClick={() => doAction("attach_awb", { awb: awbInput })} disabled={!awbInput}>Set</button>
+                  <button className="admin-btn admin-btn-primary admin-btn-sm" onClick={() => doAction("create_pickup")} disabled={isLoading}>
+                    🚚 Create Pickup
+                  </button>
+                  <button className="admin-btn admin-btn-sm" onClick={() => { setSelfShipUrl(""); setSelfShipCarrier(""); setShowSelfShip(!showSelfShip); }} disabled={isLoading}>
+                    📦 Self Ship
+                  </button>
+                </div>
+                {showSelfShip && (
+                  <div className="self-ship-popup">
+                    <div style={{ fontWeight: 600, marginBottom: 12 }}>Customer Self-Ship Details</div>
+                    <label className="admin-label">Tracking Link</label>
+                    <input
+                      className="admin-input"
+                      type="url"
+                      placeholder="https://tracking.example.com/ABC123"
+                      value={selfShipUrl}
+                      onChange={(e) => setSelfShipUrl(e.target.value)}
+                      style={{ width: "100%", marginBottom: 10 }}
+                    />
+                    <label className="admin-label">Carrier Name <span style={{ color: "var(--admin-text-muted)", fontWeight: 400 }}>(optional)</span></label>
+                    <input
+                      className="admin-input"
+                      placeholder="e.g. India Post, DTDC, Customer dropped off"
+                      value={selfShipCarrier}
+                      onChange={(e) => setSelfShipCarrier(e.target.value)}
+                      style={{ width: "100%", marginBottom: 14 }}
+                    />
+                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                      <button className="admin-btn admin-btn-sm" onClick={() => setShowSelfShip(false)}>Cancel</button>
+                      <button
+                        className="admin-btn admin-btn-primary admin-btn-sm"
+                        disabled={!selfShipUrl || isLoading}
+                        onClick={() => { doAction("self_ship", { trackingUrl: selfShipUrl, carrierName: selfShipCarrier }); setShowSelfShip(false); }}
+                      >
+                        Save Tracking
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : null}
           </div>

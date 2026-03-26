@@ -87,6 +87,9 @@ model ReturnRequest {
   refundId            String?
   refundAmount        Decimal?  @db.Decimal(10, 2)
   utrNumber           String?
+  // Self-ship tracking
+  trackingUrl         String?
+  carrierName         String?
   // Auto-action tracking
   autoAction          String?
   // Additional fields

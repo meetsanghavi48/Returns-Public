@@ -1086,6 +1086,19 @@
 .dp-history-item:hover { background: #f9fafb; }
 .dp-history-item.current { background: #f0f0ff; border-color: var(--admin-accent); }
 
+/* Self-ship popup */
+.self-ship-popup {
+  position: absolute;
+  background: white;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  width: 340px;
+  z-index: 100;
+  margin-top: 8px;
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .admin-sidebar { display: none; }

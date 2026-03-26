@@ -412,6 +412,36 @@ export async function approveRequest(
     "Manual approval",
   );
 
+  // Try auto pickup if logistics configured
+  const { getDefaultLogisticsForShop, createPickupForReturn } = await import("./logistics.server");
+  const defaultLogistics = await getDefaultLogisticsForShop(shop);
+  if (defaultLogistics) {
+    try {
+      const pickupResult = await createPickupForReturn(request.id, shop);
+      if (!pickupResult.success) {
+        throw new Error(pickupResult.error || "Pickup creation failed");
+      }
+    } catch (pickupErr: any) {
+      // Revert to pending on pickup failure
+      await prisma.returnRequest.update({
+        where: { reqId },
+        data: { status: "pending", approvedAt: null },
+      });
+      await prisma.returnEvent.create({
+        data: {
+          shop,
+          returnId: request.id,
+          type: "pickup_failed",
+          message: pickupErr.message,
+          actor: "system",
+          metadata: { error: pickupErr.message } as any,
+        },
+      });
+      await auditLog(shop, request.orderId, reqId, "pickup_failed", "system", pickupErr.message);
+      throw new Error("Pickup creation failed. Return moved back to Pending. Please try again or connect a logistics partner in Settings.");
+    }
+  }
+
   // Send approval notification
   const approveEvent = request.requestType === "exchange" ? "exchange_approved" : "return_approved";
   sendNotification(shop, approveEvent, reqId, {
