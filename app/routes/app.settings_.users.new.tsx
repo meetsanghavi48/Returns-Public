@@ -96,7 +96,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     } catch (e) {
       // Silently fail — user is still created
     }
-    return redirect("/admin/settings/users");
+    return redirect("/app/settings/users");
   }
 
   return json({ error: "Unknown intent" }, { status: 400 });
@@ -162,7 +162,7 @@ export default function CreateUser() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
-          <Link to="/admin/settings/users" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Users</Link>
+          <Link to="/app/settings/users" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Users</Link>
           <h1 style={{ margin: "4px 0 0" }}>You are adding a new user</h1>
         </div>
         <button className="admin-btn admin-btn-primary" onClick={handleSubmit} disabled={!form.name || !form.email || isLoading}>

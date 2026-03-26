@@ -155,7 +155,7 @@ export default function EditNotification() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
-          <Link to="/admin/settings/notifications" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Notifications</Link>
+          <Link to="/app/settings/notifications" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Notifications</Link>
           <h1 style={{ margin: "4px 0 0" }}>Edit: {eventKey.replace(/_/g, " ")}</h1>
         </div>
         <div style={{ display: "flex", gap: 8 }}>

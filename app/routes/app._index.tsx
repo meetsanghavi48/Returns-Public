@@ -83,7 +83,7 @@ export default function AdminDashboard() {
       <div className="admin-card">
         <div className="admin-card-header">
           <h2 className="admin-card-title">Recent Requests</h2>
-          <Link to="/admin/returns" className="admin-btn admin-btn-sm">View All</Link>
+          <Link to="/app/returns" className="admin-btn admin-btn-sm">View All</Link>
         </div>
 
         {recent.length === 0 ? (

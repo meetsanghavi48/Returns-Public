@@ -123,7 +123,7 @@ export default function SettingsLocations() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
-          <Link to="/admin/settings" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Settings</Link>
+          <Link to="/app/settings" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Settings</Link>
           <h1 style={{ margin: "4px 0 0" }}>Locations</h1>
         </div>
         <button className="admin-btn admin-btn-primary" onClick={openAdd}>+ Add a new location</button>

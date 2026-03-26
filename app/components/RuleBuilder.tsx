@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Link } from "@remix-run/react";
+import { Link, useLocation } from "@remix-run/react";
 import { CONDITION_TYPES, ACTION_TYPES } from "../services/automation-types";
 
 interface RuleData {
@@ -19,6 +19,8 @@ interface RuleBuilderProps {
 }
 
 export default function RuleBuilder({ title, initialData, error, isSubmitting, onSave }: RuleBuilderProps) {
+  const location = useLocation();
+  const basePath = location.pathname.startsWith("/app") ? "/app/settings/automation" : "{basePath}";
   const [name, setName] = useState(initialData?.name || "");
   const [description, setDescription] = useState(initialData?.description || "");
   const [matchType, setMatchType] = useState(initialData?.matchType || "ALL");
@@ -77,11 +79,11 @@ export default function RuleBuilder({ title, initialData, error, isSubmitting, o
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
-          <Link to="/admin/settings/automation" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Automations</Link>
+          <Link to={basePath} style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Automations</Link>
           <h1 style={{ margin: "4px 0 0" }}>{title}</h1>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <Link to="/admin/settings/automation" className="admin-btn">Cancel</Link>
+          <Link to={basePath} className="admin-btn">Cancel</Link>
           <button className="admin-btn admin-btn-primary" onClick={handleSave} disabled={isSubmitting}>
             {isSubmitting ? "Saving..." : "Save Rule"}
           </button>

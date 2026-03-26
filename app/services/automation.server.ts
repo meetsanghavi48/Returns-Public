@@ -168,6 +168,14 @@ function evaluateCondition(condition: Condition, data: ReturnWithOrder): boolean
       return false;
     }
 
+    case "item_count": {
+      const itemCount = data.items.length;
+      if (operator === "greater_than") return itemCount > numVal;
+      if (operator === "less_than") return itemCount < numVal;
+      if (operator === "equals") return itemCount === numVal;
+      return false;
+    }
+
     default:
       return false;
   }

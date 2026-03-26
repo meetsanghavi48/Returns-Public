@@ -106,7 +106,7 @@ export default function SettingsLanguages() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
-          <Link to="/admin/settings" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Settings</Link>
+          <Link to="/app/settings" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Settings</Link>
           <h1 style={{ margin: "4px 0 0" }}>Languages</h1>
         </div>
         <button className="admin-btn admin-btn-primary" onClick={() => setShowModal(true)}>+ Add language</button>

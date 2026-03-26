@@ -243,7 +243,7 @@ export default function AdminIntegrations() {
     <>
       <div className="admin-page-header">
         <div>
-          <a href="/admin/settings" className="admin-back">&lsaquo; Settings</a>
+          <a href="/app/settings" className="admin-back">&lsaquo; Settings</a>
           <h1 className="admin-page-title">Integrations</h1>
           <p style={{ color: "var(--admin-text-muted)", fontSize: 14, marginTop: 4 }}>
             Connect your logistics, payment, and WMS providers

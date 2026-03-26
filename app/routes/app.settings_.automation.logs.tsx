@@ -33,7 +33,7 @@ export default function AutomationLogs() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
-          <Link to="/admin/settings/automation" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Automations</Link>
+          <Link to="/app/settings/automation" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Automations</Link>
           <h1 style={{ margin: "4px 0 0" }}>Automation Logs</h1>
           <p style={{ fontSize: 13, color: "#666", marginTop: 4 }}>History of automation rule executions</p>
         </div>

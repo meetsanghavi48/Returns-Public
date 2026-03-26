@@ -39,7 +39,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     data: { name: name.trim(), description: description?.trim() || null, matchType: matchType || "ALL", conditions, actions },
   });
 
-  return redirect("/admin/settings/automation");
+  return redirect("/app/settings/automation");
 };
 
 export default function EditAutomationRule() {

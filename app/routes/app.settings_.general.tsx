@@ -243,7 +243,7 @@ export default function GeneralSettings() {
     <>
       <div className="admin-page-header">
         <div>
-          <a href="/admin/settings" className="admin-back">‹ Settings</a>
+          <a href="/app/settings" className="admin-back">‹ Settings</a>
           <h1 className="admin-page-title">General</h1>
         </div>
         <button className="admin-btn admin-btn-primary" onClick={handleSave} disabled={isLoading}>

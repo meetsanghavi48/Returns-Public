@@ -67,11 +67,11 @@ export default function SettingsUsers() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
-          <Link to="/admin/settings" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Settings</Link>
+          <Link to="/app/settings" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Settings</Link>
           <h1 style={{ margin: "4px 0 0" }}>Users and permissions</h1>
           <p style={{ fontSize: 13, color: "#666", marginTop: 4 }}>Manage what users can see or do in your store.</p>
         </div>
-        <Link to="/admin/settings/users/new" className="admin-btn admin-btn-primary">+ Add a new user</Link>
+        <Link to="/app/settings/users/new" className="admin-btn admin-btn-primary">+ Add a new user</Link>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24 }}>

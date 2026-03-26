@@ -175,7 +175,7 @@ export default function LanguageEdit() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
-          <Link to="/admin/settings/languages" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Languages</Link>
+          <Link to="/app/settings/languages" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Languages</Link>
           <h1 style={{ margin: "4px 0 0" }}>{language.name} ({language.locale})</h1>
         </div>
         <div style={{ display: "flex", gap: 8 }}>

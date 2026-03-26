@@ -254,7 +254,7 @@ export default function AdminReturns() {
     <>
       <div className="admin-page-header">
         <h1 className="admin-page-title">Returns</h1>
-        <button className="admin-btn admin-btn-primary" onClick={() => navigate("/admin/returns/new")}>
+        <button className="admin-btn admin-btn-primary" onClick={() => navigate("/app/returns/new")}>
           + Create Return
         </button>
       </div>

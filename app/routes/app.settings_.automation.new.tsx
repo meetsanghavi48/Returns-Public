@@ -36,7 +36,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     data: { shop, name: name.trim(), description: description?.trim() || null, matchType: matchType || "ALL", conditions, actions, isActive: true },
   });
 
-  return redirect("/admin/settings/automation");
+  return redirect("/app/settings/automation");
 };
 
 export default function NewAutomationRule() {

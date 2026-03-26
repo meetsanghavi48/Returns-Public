@@ -141,7 +141,7 @@ export default function PoliciesSettings() {
       <div>
         <div className="admin-page-header">
           <div>
-            <a href="/admin/settings" className="admin-back">‹ Settings</a>
+            <a href="/app/settings" className="admin-back">‹ Settings</a>
             <h1 className="admin-page-title">Policies</h1>
           </div>
           <button className="admin-btn admin-btn-primary" onClick={handleSave} disabled={isLoading}>
@@ -424,7 +424,7 @@ export default function PoliciesSettings() {
         <section id="shipping-charges" className="admin-card" style={{ marginBottom: 16 }}>
           <h3 className="admin-card-title">Return & Exchange Shipping Charges</h3>
           <div className="admin-banner info">
-            Shipping fees and restocking fees are now configured in <a href="/admin/settings/general" style={{ color: "var(--admin-accent)" }}>General Settings</a>.
+            Shipping fees and restocking fees are now configured in <a href="/app/settings/general" style={{ color: "var(--admin-accent)" }}>General Settings</a>.
           </div>
         </section>
 

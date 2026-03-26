@@ -194,7 +194,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       case "delete": {
         await prisma.returnRequest.delete({ where: { reqId, shop } });
         await auditLog(shop, null, reqId, "deleted", "admin", "");
-        return json({ ok: true, message: "Deleted", redirect: "/admin/returns" });
+        return json({ ok: true, message: "Deleted", redirect: "/app/returns" });
       }
       default:
         return json({ error: "Unknown action" }, { status: 400 });
@@ -290,7 +290,7 @@ export default function AdminReturnDetail() {
     <div className="dp">
       {/* === TOP BAR === */}
       <div className="dp-topbar">
-        <a href="/admin/returns" className="dp-back">‹ All Returns</a>
+        <a href="/app/returns" className="dp-back">‹ All Returns</a>
         <div className="dp-topbar-center">
           <span className="dp-req-id">#{displayId}</span>
           <div className="dp-order-num">

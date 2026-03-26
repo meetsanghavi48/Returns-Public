@@ -225,7 +225,7 @@ export default function AdminLogistics() {
     <>
       <div className="admin-page-header">
         <div>
-          <a href="/admin/settings" className="admin-back">&lsaquo; Settings</a>
+          <a href="/app/settings" className="admin-back">&lsaquo; Settings</a>
           <h1 className="admin-page-title">Logistics</h1>
           <p style={{ color: "var(--admin-text-muted)", fontSize: 14, marginTop: 4 }}>
             {allAdapters.length} providers available &middot; {connectedCount} connected

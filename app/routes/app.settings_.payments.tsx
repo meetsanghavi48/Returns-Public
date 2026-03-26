@@ -211,7 +211,7 @@ export default function SettingsPayments() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
-          <Link to="/admin/settings" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Settings</Link>
+          <Link to="/app/settings" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Settings</Link>
           <h1 style={{ margin: "4px 0 0" }}>Payments</h1>
           <p style={{ fontSize: 13, color: "#666", marginTop: 4 }}>Manage your payment provider integrations</p>
         </div>

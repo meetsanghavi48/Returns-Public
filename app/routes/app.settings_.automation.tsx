@@ -59,13 +59,13 @@ export default function SettingsAutomation() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
-          <Link to="/admin/settings" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Settings</Link>
+          <Link to="/app/settings" style={{ color: "var(--admin-accent)", textDecoration: "none", fontSize: 13 }}>&#8249; Settings</Link>
           <h1 style={{ margin: "4px 0 0" }}>Automations</h1>
           <p style={{ fontSize: 13, color: "#666", marginTop: 4 }}>Create rules to automatically perform actions based on conditions.</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button className="admin-btn" onClick={() => navigate("/admin/settings/automation/logs")}>View logs</button>
-          <button className="admin-btn admin-btn-primary" onClick={() => navigate("/admin/settings/automation/new")}>+ Create new rule</button>
+          <button className="admin-btn" onClick={() => navigate("/app/settings/automation/logs")}>View logs</button>
+          <button className="admin-btn admin-btn-primary" onClick={() => navigate("/app/settings/automation/new")}>+ Create new rule</button>
         </div>
       </div>
 
@@ -99,7 +99,7 @@ export default function SettingsAutomation() {
               <div style={{ fontSize: 48, marginBottom: 12 }}>&#9889;</div>
               <h3 style={{ fontSize: 18, marginBottom: 8 }}>No automation rules yet</h3>
               <p style={{ color: "#666", marginBottom: 16 }}>Set up rules to automate approvals, rejections, tagging, and more.</p>
-              <button className="admin-btn admin-btn-primary" onClick={() => navigate("/admin/settings/automation/new")}>
+              <button className="admin-btn admin-btn-primary" onClick={() => navigate("/app/settings/automation/new")}>
                 Create your first rule
               </button>
             </div>
