@@ -2,13 +2,13 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, useSubmit, useNavigation, useActionData } from "@remix-run/react";
 import { useState } from "react";
-import { requireAdminAuth } from "../services/admin-session.server";
+import { requireAppAuth } from "../services/app-auth.server";
 import prisma from "../db.server";
 import { getAllSettings, setSetting } from "../services/settings.server";
 import { shopifyREST } from "../services/shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { shop, accessToken } = await requireAdminAuth(request);
+  const { shop, accessToken } = await requireAppAuth(request);
   const settings = await getAllSettings(shop);
   const shopConfig = await prisma.shop.findUnique({ where: { shop } });
   const appUrl = process.env.SHOPIFY_APP_URL || "";
@@ -28,7 +28,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { shop, accessToken } = await requireAdminAuth(request);
+  const { shop, accessToken } = await requireAppAuth(request);
   const formData = await request.formData();
   const intent = formData.get("intent") as string;
 

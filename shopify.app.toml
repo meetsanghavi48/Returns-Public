@@ -3,7 +3,7 @@
 client_id = "7450d42da8f67ceda10723799de7f45d"
 name = "Public Returns Prime"
 application_url = "https://returns-public.onrender.com"
-embedded = false
+embedded = true
 handle = "returns-public-prime"
 
 [build]
@@ -19,7 +19,7 @@ api_version = "2026-01"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_customers,write_customers,write_draft_orders,read_draft_orders,read_gift_cards,write_gift_cards,write_inventory,read_inventory,read_orders,write_orders,read_products,write_products,read_themes,write_themes"
+scopes = "read_customers,write_customers,write_draft_orders,read_draft_orders,read_gift_cards,write_gift_cards,read_inventory,write_inventory,read_orders,write_orders,read_products,read_themes"
 optional_scopes = [ ]
 use_legacy_install_flow = false
 

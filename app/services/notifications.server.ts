@@ -20,11 +20,34 @@ interface SettingsValue {
   value?: string;
 }
 
-async function sendEmail(params: NotificationParams): Promise<boolean> {
+async function getSenderInfo(
+  prisma: typeof import("../db.server").default,
+  shop: string,
+): Promise<{ email: string; name: string }> {
+  const senderEmail = await prisma.settings.findFirst({ where: { shop, key: "store_email" } });
+  const brandName = await prisma.settings.findFirst({ where: { shop, key: "brandName" } });
+  const email = (senderEmail?.value as any)?.value || process.env.SENDER_EMAIL || "noreply@returnsmanager.app";
+  const name = (brandName?.value as any)?.value || "Returns Manager";
+  return { email, name };
+}
+
+async function sendEmail(params: NotificationParams & { shop?: string }): Promise<boolean> {
   const apiKey = process.env.SENDGRID_API_KEY;
   if (!apiKey) {
     console.warn("SENDGRID_API_KEY not set, skipping email");
     return false;
+  }
+
+  let senderEmail = process.env.SENDER_EMAIL || "noreply@returnsmanager.app";
+  let senderName = "Returns Manager";
+
+  if (params.shop) {
+    try {
+      const { default: prisma } = await import("../db.server");
+      const info = await getSenderInfo(prisma, params.shop);
+      senderEmail = info.email;
+      senderName = info.name;
+    } catch {}
   }
 
   try {
@@ -36,7 +59,7 @@ async function sendEmail(params: NotificationParams): Promise<boolean> {
       },
       body: JSON.stringify({
         personalizations: [{ to: [{ email: params.to }] }],
-        from: { email: "returns@blakc.in", name: "BLAKC Returns" },
+        from: { email: senderEmail, name: senderName },
         subject: params.subject,
         content: [{ type: "text/html", value: params.html }],
       }),
@@ -55,9 +78,9 @@ async function getBrandName(
   const brandSetting = await prisma.settings.findFirst({
     where: { shop, key: "brandName" },
   });
-  if (!brandSetting) return "BLAKC";
+  if (!brandSetting) return "Returns Manager";
   const settingValue = brandSetting.value as unknown as SettingsValue;
-  return String(settingValue?.value || "BLAKC");
+  return String(settingValue?.value || "Returns Manager");
 }
 
 export async function sendReturnConfirmation(returnId: string, shop: string): Promise<void> {
@@ -77,6 +100,7 @@ export async function sendReturnConfirmation(returnId: string, shop: string): Pr
 
   await sendEmail({
     to: ret.customerEmail,
+    shop,
     subject: `Return Request #${ret.reqNum || ret.reqId} Confirmed - ${brandName}`,
     html: buildEmailTemplate({
       brandName,
@@ -122,6 +146,7 @@ export async function sendStatusUpdate(
 
   await sendEmail({
     to: ret.customerEmail,
+    shop,
     subject: `Return Update: ${newStatus.replace(/_/g, " ").toUpperCase()} - ${brandName}`,
     html: buildEmailTemplate({
       brandName,

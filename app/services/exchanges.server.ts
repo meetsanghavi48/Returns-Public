@@ -115,7 +115,6 @@ export async function createExchangeOrder(
 
     // Auto refund price difference if enabled and new is cheaper
     const autoRefundDiff = await getSetting<boolean>(shop, "refund_price_difference", false);
-    const restrictRefundDiff = await getSetting<boolean>(shop, "capture_payment_price_diff", false);
     if (autoRefundDiff) {
       const origPrice = exchItems.reduce((s: number, i: any) => s + (parseFloat(i.price || 0) * (parseInt(i.qty) || 1)), 0);
       const newPrice = exchItems.reduce((s: number, i: any) => {
@@ -124,7 +123,28 @@ export async function createExchangeOrder(
       }, 0);
       if (newPrice < origPrice) {
         const diff = origPrice - newPrice;
-        await auditLog(shop, request.orderId, request.reqId, "exchange_price_diff_refund", "system", `Price diff refund: ${diff.toFixed(2)}`);
+        // Issue store credit gift card for the price difference
+        try {
+          const giftCardRes = await shopifyREST(shop, accessToken, "POST", "gift_cards.json", {
+            gift_card: {
+              initial_value: diff.toFixed(2),
+              note: `Exchange price difference refund for ${request.reqId}`,
+              template_suffix: null,
+            },
+          });
+          const code = giftCardRes?.gift_card?.code || null;
+          await auditLog(shop, request.orderId, request.reqId, "exchange_price_diff_refund", "system",
+            `Price diff refund: ${diff.toFixed(2)}${code ? ` (Gift card: ${code})` : ""}`);
+        } catch (e: any) {
+          // Fallback: add as order note
+          try {
+            await shopifyREST(shop, accessToken, "PUT", `orders/${request.orderId}.json`, {
+              order: { id: request.orderId, note: `Exchange price diff refund owed: ${diff.toFixed(2)} for ${request.reqId}` },
+            });
+          } catch {}
+          await auditLog(shop, request.orderId, request.reqId, "exchange_price_diff_refund", "system",
+            `Price diff refund: ${diff.toFixed(2)} (gift card failed, added to order note)`);
+        }
       }
     }
 

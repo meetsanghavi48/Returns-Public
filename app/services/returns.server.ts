@@ -237,12 +237,19 @@ export async function submitReturnRequest(
 
   // Send notification
   const eventKey = requestType === "exchange" ? "exchange_raised" : "return_raised";
+  const appUrl = process.env.SHOPIFY_APP_URL || "";
   sendNotification(shop, eventKey, reqId, {
     customer_name: data.customerName || "Customer",
     customer_email: data.customerEmail || "",
     order_number: data.orderNumber || data.orderId,
     request_id: reqId,
     items_list: items.map((i: any) => `${i.title || "Item"} x${i.qty || 1}`).join(", "),
+    portal_url: `${appUrl}/portal/${shop}/tracking/${reqId}`,
+    tracking_url: `${appUrl}/portal/${shop}/tracking/${reqId}`,
+    store_name: shop.replace(".myshopify.com", ""),
+    refund_method: data.refundMethod || "pending",
+    awb_number: "Pending",
+    refund_amount: "Pending",
   }).catch((e) => console.error("[Notification] send error:", e.message));
 
   // Run automation rules for the new return

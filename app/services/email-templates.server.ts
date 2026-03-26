@@ -196,7 +196,7 @@ export async function sendNotification(
   const senderNameSetting = await prisma.settings.findUnique({ where: { shop_key: { shop, key: "sender_name" } } });
   const senderEmailSetting = await prisma.settings.findUnique({ where: { shop_key: { shop, key: "sender_email" } } });
   const fromName = (senderNameSetting?.value as string) || brandName;
-  const fromEmail = (senderEmailSetting?.value as string) || template.senderEmail || "returns@blakc.in";
+  const fromEmail = (senderEmailSetting?.value as string) || template.senderEmail || process.env.SENDER_EMAIL || "noreply@returnsmanager.app";
 
   const apiKey = process.env.SENDGRID_API_KEY;
   if (!apiKey) {

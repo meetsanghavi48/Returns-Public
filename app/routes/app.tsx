@@ -37,14 +37,14 @@ export default function App() {
   const { apiKey, shop, pendingCount } = useLoaderData<typeof loader>();
 
   return (
-    <AppProvider isEmbeddedApp={false} apiKey={apiKey}>
+    <AppProvider isEmbeddedApp apiKey={apiKey}>
       <div className="admin-shell">
         <aside className="admin-sidebar">
           <div className="admin-sidebar-logo">
-            <div className="admin-sidebar-logo-icon">B</div>
+            <div className="admin-sidebar-logo-icon">R</div>
             <div>
-              <div className="admin-sidebar-logo-text">BLAKC Returns</div>
-              <div className="admin-sidebar-logo-sub">Returns Manager</div>
+              <div className="admin-sidebar-logo-text">Returns Manager</div>
+              <div className="admin-sidebar-logo-sub">Dashboard</div>
             </div>
           </div>
 
@@ -70,19 +70,23 @@ export default function App() {
                   <span className="admin-nav-badge">{pendingCount}</span>
                 )}
               </NavLink>
-              <NavLink
-                to="/app/returns/new"
-                className={({ isActive }) => `admin-nav-item ${isActive ? "active" : ""}`}
-              >
-                <span className="admin-nav-icon">{"\u2795"}</span>
-                Create Request
-              </NavLink>
+            </div>
+
+            <div className="admin-sidebar-section">
+              <div className="admin-sidebar-section-title">Insights</div>
               <NavLink
                 to="/app/analytics"
                 className={({ isActive }) => `admin-nav-item ${isActive ? "active" : ""}`}
               >
-                <span className="admin-nav-icon">{"\uD83D\uDCC8"}</span>
+                <span className="admin-nav-icon">{"\uD83D\uDCCA"}</span>
                 Analytics
+              </NavLink>
+              <NavLink
+                to="/app/export"
+                className={({ isActive }) => `admin-nav-item ${isActive ? "active" : ""}`}
+              >
+                <span className="admin-nav-icon">{"\uD83D\uDCE5"}</span>
+                Export Data
               </NavLink>
             </div>
 
@@ -107,10 +111,6 @@ export default function App() {
           </nav>
 
           <div className="admin-sidebar-footer">
-            <a href={`https://${shop}/admin`} className="admin-nav-item" style={{ color: "var(--admin-sidebar-text)" }}>
-              <span className="admin-nav-icon">{"\u2190"}</span>
-              Back to Shopify
-            </a>
             <div className="admin-sidebar-shop">
               <div className="admin-sidebar-shop-dot" />
               <div className="admin-sidebar-shop-name">{shop}</div>

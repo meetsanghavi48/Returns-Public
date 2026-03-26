@@ -2,7 +2,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, useSubmit, useNavigation, Link } from "@remix-run/react";
 import { useState, useCallback } from "react";
-import { requireAdminAuth } from "../services/admin-session.server";
+import { requireAppAuth } from "../services/app-auth.server";
 import prisma from "../db.server";
 
 const VARIABLES = [
@@ -13,7 +13,7 @@ const VARIABLES = [
 ];
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
-  const { shop } = await requireAdminAuth(request);
+  const { shop } = await requireAppAuth(request);
   const eventKey = params.eventKey!;
 
   const template = await prisma.emailNotification.findUnique({
@@ -26,7 +26,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
-  const { shop } = await requireAdminAuth(request);
+  const { shop } = await requireAppAuth(request);
   const eventKey = params.eventKey!;
   const formData = await request.formData();
   const intent = formData.get("intent") as string;

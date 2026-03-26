@@ -1,9 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// Set required env var before module loads
+process.env.SHOPIFY_API_SECRET = "test-secret-for-session-signing";
+
 vi.mock("~/db.server", () => ({
   default: {
     shop: { findUnique: vi.fn() },
+    appUser: { findFirst: vi.fn() },
   },
+}));
+
+vi.mock("@remix-run/node", () => ({
+  createCookieSessionStorage: () => ({
+    getSession: vi.fn(),
+    commitSession: vi.fn(),
+    destroySession: vi.fn(),
+  }),
+  redirect: vi.fn((url: string) => { throw new Response(null, { status: 302, headers: { Location: url } }); }),
 }));
 
 describe("admin-session.server", () => {

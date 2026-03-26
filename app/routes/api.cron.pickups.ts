@@ -3,12 +3,19 @@ import { json } from "@remix-run/node";
 import prisma from "../db.server";
 import { createDelhiveryPickup } from "../services/delhivery.server";
 
+function verifyCronAuth(request: Request): boolean {
+  const expected = process.env.CRON_SECRET;
+  if (!expected) return false;
+  // Support both Bearer header and query string (prefer header)
+  const authHeader = request.headers.get("Authorization");
+  if (authHeader) return authHeader === `Bearer ${expected}`;
+  return new URL(request.url).searchParams.get("secret") === expected;
+}
+
 // Cron endpoint: create Delhivery pickups for approved requests
 // Triggered externally (e.g., cron-job.org) every 5 minutes
 export const loader = async ({ request }: ActionFunctionArgs) => {
-  // Verify cron secret
-  const secret = new URL(request.url).searchParams.get("secret");
-  if (secret !== process.env.CRON_SECRET) {
+  if (!verifyCronAuth(request)) {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
 

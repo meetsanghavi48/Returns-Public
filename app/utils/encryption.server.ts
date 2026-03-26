@@ -12,7 +12,11 @@ function getKey(): Buffer {
   if (key.length !== 64) {
     throw new Error("ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes)");
   }
-  return Buffer.from(key, "hex");
+  const buffer = Buffer.from(key, "hex");
+  if (buffer.length !== 32) {
+    throw new Error("ENCRYPTION_KEY must decode to exactly 32 bytes");
+  }
+  return buffer;
 }
 
 export function encrypt(text: string): string {

@@ -18,15 +18,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const shopParam = url.searchParams.get("shop");
   if (shopParam) {
+    // Validate shop domain format
+    const normalizedShop = shopParam.includes(".myshopify.com") ? shopParam : `${shopParam}.myshopify.com`;
+    if (!/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(normalizedShop)) {
+      return redirect("/admin/login");
+    }
     // Verify shop exists and has a valid access token
-    const shopRecord = await prisma.shop.findUnique({ where: { shop: shopParam } });
+    const shopRecord = await prisma.shop.findUnique({ where: { shop: normalizedShop } });
     if (shopRecord && shopRecord.accessToken && !shopRecord.uninstalledAt) {
       // Check if owner exists
-      const owner = await prisma.appUser.findFirst({ where: { shop: shopParam, role: "owner" } });
+      const owner = await prisma.appUser.findFirst({ where: { shop: normalizedShop, role: "owner" } });
       if (!owner) {
-        return redirect(`/admin/signup?shop=${shopParam}`);
+        return redirect(`/admin/signup?shop=${encodeURIComponent(normalizedShop)}`);
       }
-      return createAdminSession(shopParam, "/admin/dashboard");
+      return createAdminSession(normalizedShop, "/admin/dashboard");
     }
   }
 

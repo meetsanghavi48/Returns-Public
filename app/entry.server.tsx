@@ -47,6 +47,10 @@ function handleBotRequest(
           const body = new PassThrough();
           const stream = createReadableStreamFromReadable(body);
           responseHeaders.set("Content-Type", "text/html");
+          responseHeaders.set("X-Frame-Options", "SAMEORIGIN");
+          responseHeaders.set("X-Content-Type-Options", "nosniff");
+          responseHeaders.set("Referrer-Policy", "strict-origin-when-cross-origin");
+          responseHeaders.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
           resolve(
             new Response(stream, {
               headers: responseHeaders,
@@ -82,6 +86,10 @@ function handleBrowserRequest(
           const body = new PassThrough();
           const stream = createReadableStreamFromReadable(body);
           responseHeaders.set("Content-Type", "text/html");
+          responseHeaders.set("X-Frame-Options", "SAMEORIGIN");
+          responseHeaders.set("X-Content-Type-Options", "nosniff");
+          responseHeaders.set("Referrer-Policy", "strict-origin-when-cross-origin");
+          responseHeaders.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
           resolve(
             new Response(stream, {
               headers: responseHeaders,

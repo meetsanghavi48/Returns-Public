@@ -27,6 +27,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return json({ shop: shopParam });
 };
 
+// Simple in-memory rate limiter
+const signupAttempts = new Map<string, { count: number; resetAt: number }>();
+function checkSignupLimit(key: string): boolean {
+  const now = Date.now();
+  const entry = signupAttempts.get(key);
+  if (!entry || now > entry.resetAt) {
+    signupAttempts.set(key, { count: 1, resetAt: now + 60 * 60 * 1000 });
+    return true;
+  }
+  if (entry.count >= 3) return false;
+  entry.count++;
+  return true;
+}
+
 export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
   const shopDomain = (formData.get("shop") as string || "").trim().toLowerCase();
@@ -36,10 +50,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const confirmPassword = (formData.get("confirmPassword") as string) || "";
 
   if (!shopDomain) return json({ error: "Store domain is required" });
-  if (!name) return json({ error: "Name is required" });
-  if (!email) return json({ error: "Email is required" });
-  if (password.length < 8) return json({ error: "Password must be at least 8 characters" });
+  if (!name || name.length > 100) return json({ error: "Name is required (max 100 chars)" });
+  if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: "Valid email is required" });
+  if (password.length < 8 || password.length > 128) return json({ error: "Password must be 8-128 characters" });
   if (password !== confirmPassword) return json({ error: "Passwords do not match" });
+
+  // Rate limit signups by email
+  if (!checkSignupLimit(`signup:${email}`)) {
+    return json({ error: "Too many signup attempts. Please try again later." }, { status: 429 });
+  }
 
   const normalizedShop = shopDomain.includes(".myshopify.com") ? shopDomain : `${shopDomain}.myshopify.com`;
 

@@ -14,6 +14,23 @@ export const links: LinksFunction = () => [
 
 export const handle = { isPublic: true };
 
+// Simple in-memory rate limiter for auth endpoints
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+const MAX_ATTEMPTS = 5;
+const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now();
+  const entry = loginAttempts.get(key);
+  if (!entry || now > entry.resetAt) {
+    loginAttempts.set(key, { count: 1, resetAt: now + WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= MAX_ATTEMPTS) return false;
+  entry.count++;
+  return true;
+}
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shop = await getAdminSession(request);
   if (shop) {
@@ -31,6 +48,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const password = (formData.get("password") as string) || "";
 
   if (!email || !password) return json({ error: "Email and password are required" });
+
+  // Validate email format
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return json({ error: "Invalid email format" });
+  }
+
+  // Rate limit by email
+  const rateLimitKey = `login:${email}`;
+  if (!checkRateLimit(rateLimitKey)) {
+    return json({ error: "Too many login attempts. Please try again in 15 minutes." }, { status: 429 });
+  }
 
   // Find user by email across all shops
   const user = await prisma.appUser.findFirst({

@@ -14,6 +14,20 @@ export function uid(): string {
   );
 }
 
+// Simple rate limiter for Shopify API (40 req/sec per shop)
+const shopifyCallLog = new Map<string, number[]>();
+async function shopifyThrottle(shop: string): Promise<void> {
+  const now = Date.now();
+  const calls = shopifyCallLog.get(shop) || [];
+  const recentCalls = calls.filter((t) => now - t < 1000);
+  if (recentCalls.length >= 20) {
+    // Back off — wait for window to clear
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  recentCalls.push(now);
+  shopifyCallLog.set(shop, recentCalls.slice(-40));
+}
+
 // Shopify REST API helper (uses stored access token for background/portal operations)
 export async function shopifyREST(
   shop: string,
@@ -22,6 +36,8 @@ export async function shopifyREST(
   endpoint: string,
   body?: unknown,
 ) {
+  await shopifyThrottle(shop);
+
   const opts: RequestInit = {
     method,
     headers: {
@@ -35,6 +51,14 @@ export async function shopifyREST(
     `https://${shop}/admin/api/${apiVersion}/${endpoint}`,
     opts,
   );
+
+  // Handle rate limiting with retry
+  if (r.status === 429) {
+    const retryAfter = parseFloat(r.headers.get("Retry-After") || "2");
+    await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+    return shopifyREST(shop, accessToken, method, endpoint, body);
+  }
+
   const text = await r.text();
   console.log(`[Shopify] ${method} ${endpoint} → ${r.status}`);
   if (!r.ok) console.error("[Shopify ERR]", text.slice(0, 400));

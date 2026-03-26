@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { Outlet, NavLink, useLoaderData } from "@remix-run/react";
+import { Outlet, NavLink, useLoaderData, useRouteError, isRouteErrorResponse } from "@remix-run/react";
 import { AppProvider } from "@shopify/polaris";
 import enTranslations from "@shopify/polaris/locales/en.json";
 import { requireAdminAuth } from "../services/admin-session.server";
@@ -21,6 +21,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   });
   return json({ shop, pendingCount });
 };
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+  const status = isRouteErrorResponse(error) ? error.status : 500;
+  const message = isRouteErrorResponse(error)
+    ? error.data || "Something went wrong"
+    : "An unexpected error occurred. Please try again.";
+
+  return (
+    <div style={{ fontFamily: "'Inter', -apple-system, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#f5f5f5" }}>
+      <div style={{ background: "#fff", padding: 40, borderRadius: 12, boxShadow: "0 2px 12px rgba(0,0,0,0.08)", maxWidth: 480, textAlign: "center" }}>
+        <div style={{ width: 48, height: 48, background: "#ef4444", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: 24, color: "#fff" }}>!</div>
+        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Error {status}</h1>
+        <p style={{ fontSize: 14, color: "#6b7280", marginBottom: 24 }}>{String(message)}</p>
+        <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+          <a href="/admin/dashboard" style={{ display: "inline-block", padding: "10px 24px", background: "#6c5ce7", color: "#fff", borderRadius: 8, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Dashboard</a>
+          <button onClick={() => window.location.reload()} style={{ padding: "10px 24px", background: "#f3f4f6", color: "#374151", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Retry</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminLayout() {
   const { shop, pendingCount } = useLoaderData<typeof loader>();
