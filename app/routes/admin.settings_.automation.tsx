@@ -148,25 +148,28 @@ function RuleCard({ rule }: { rule: any }) {
   return (
     <div className="admin-card" style={{ marginBottom: 16, padding: 20 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>{rule.name}</h3>
-            <span className={`admin-badge ${isActive ? "success" : ""}`}>{isActive ? "Active" : "Inactive"}</span>
-          </div>
-          {rule.description && (
-            <p style={{ fontSize: 13, color: "#888", marginBottom: 8 }}>{rule.description}</p>
-          )}
-          <div style={{ display: "flex", gap: 16, fontSize: 12, color: "#888" }}>
-            <span>{conditions.length} condition{conditions.length !== 1 ? "s" : ""} ({rule.matchType})</span>
-            <span>{actions.length} action{actions.length !== 1 ? "s" : ""}</span>
-            <span>Run count: {rule.runCount}</span>
-            <span>Last run: {lastRun}</span>
+        <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+          <label className="toggle-switch" style={{ marginTop: 2 }}>
+            <input type="checkbox" checked={isActive} onChange={handleToggle} />
+            <span className="toggle-slider" />
+          </label>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>{rule.name}</h3>
+              <span className={`admin-badge ${isActive ? "success" : ""}`}>{isActive ? "Active" : "Inactive"}</span>
+            </div>
+            {rule.description && (
+              <p style={{ fontSize: 13, color: "#888", marginBottom: 8 }}>{rule.description}</p>
+            )}
+            <div style={{ display: "flex", gap: 16, fontSize: 12, color: "#888" }}>
+              <span>{conditions.length} condition{conditions.length !== 1 ? "s" : ""} ({rule.matchType})</span>
+              <span>{actions.length} action{actions.length !== 1 ? "s" : ""}</span>
+              <span>Run count: {rule.runCount}</span>
+              <span>Last run: {lastRun}</span>
+            </div>
           </div>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
-          <button className="admin-btn admin-btn-sm" onClick={handleToggle}>
-            {isActive ? "Turn Off" : "Turn On"}
-          </button>
           <button className="admin-btn admin-btn-sm" onClick={() => navigate(`/admin/settings/automation/${rule.id}`)}>
             Edit
           </button>

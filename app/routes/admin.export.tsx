@@ -82,13 +82,30 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       orderBy: { createdAt: "desc" },
     });
 
+    // Also fetch logistics configs to map provider names
+    const logisticsConfigs = await prisma.logisticsConfig.findMany({
+      where: { shop, isActive: true },
+      select: { providerKey: true, displayName: true, isDefault: true },
+    });
+    const defaultLogistics = logisticsConfigs.find((c) => c.isDefault) || logisticsConfigs[0];
+    const appUrl = process.env.SHOPIFY_APP_URL || "";
+
+    // Proper CSV escaping
+    function csvEscape(value: string): string {
+      if (!value) return "";
+      if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    }
+
     // Build CSV
     const useColumns = columns.length > 0 ? columns : CSV_COLUMNS;
-    const csvRows: string[] = [useColumns.join(",")];
+    const csvRows: string[] = [useColumns.map(csvEscape).join(",")];
 
     for (const r of returns) {
       const items = (r.items as any[]) || [];
-      const itemNames = items.map((i) => i.title || "").join("; ");
+      const itemNames = items.map((i) => `${i.title || "Unknown"} x${i.qty || 1}`).join("; ");
       const reasons = items.map((i) => i.reason || "").filter(Boolean).join("; ");
       const daysToResolve = r.approvedAt
         ? Math.round((new Date(r.approvedAt).getTime() - new Date(r.createdAt).getTime()) / 86400000)
@@ -101,19 +118,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         "Customer Phone": r.customerPhone || "",
         "Status": r.status,
         "Return Type": r.requestType,
-        "Items": `"${itemNames}"`,
-        "Reasons": `"${reasons}"`,
-        "Logistics Partner": r.awbStatus || "",
+        "Items": itemNames,
+        "Reasons": reasons,
+        "Logistics Partner": r.carrierName || defaultLogistics?.displayName || "",
         "AWB Number": r.awb || "",
-        "Tracking URL": "",
+        "Tracking URL": r.trackingUrl || (r.awb && defaultLogistics ? `${appUrl}/portal/${shop}/tracking/${r.reqId}` : ""),
         "Refund Method": r.refundMethod || "",
         "Refund Amount": r.refundAmount ? String(r.refundAmount) : "",
-        "Created Date": new Date(r.createdAt).toISOString(),
-        "Updated Date": new Date(r.updatedAt).toISOString(),
+        "Created Date": new Date(r.createdAt).toLocaleDateString("en-IN") + " " + new Date(r.createdAt).toLocaleTimeString("en-IN"),
+        "Updated Date": new Date(r.updatedAt).toLocaleDateString("en-IN") + " " + new Date(r.updatedAt).toLocaleTimeString("en-IN"),
         "Days to Resolve": String(daysToResolve),
       };
 
-      csvRows.push(useColumns.map((col) => row[col] || "").join(","));
+      csvRows.push(useColumns.map((col) => csvEscape(row[col] || "")).join(","));
     }
 
     // Mark as exported
@@ -162,16 +179,41 @@ export default function AdminExport() {
     );
   }, []);
 
-  const handleExport = useCallback(() => {
-    const fd = new FormData();
-    fd.set("intent", "export");
-    fd.set("datePreset", datePreset);
-    fd.set("dateFrom", dateFrom);
-    fd.set("dateTo", dateTo);
-    fd.set("dataTypes", JSON.stringify(dataTypes));
-    fd.set("columns", JSON.stringify(columns));
-    submit(fd, { method: "post" });
-  }, [datePreset, dateFrom, dateTo, dataTypes, columns, submit]);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = useCallback(async () => {
+    setExporting(true);
+    try {
+      const fd = new FormData();
+      fd.set("intent", "export");
+      fd.set("datePreset", datePreset);
+      fd.set("dateFrom", dateFrom);
+      fd.set("dateTo", dateTo);
+      fd.set("dataTypes", JSON.stringify(dataTypes));
+      fd.set("columns", JSON.stringify(columns));
+
+      const res = await fetch(window.location.pathname, { method: "POST", body: fd });
+      if (!res.ok) {
+        alert("Export failed. Please try again.");
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const date = new Date().toISOString().slice(0, 10);
+      a.download = `returns-${date}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert("Export failed. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  }, [datePreset, dateFrom, dateTo, dataTypes, columns]);
 
   return (
     <>
@@ -222,8 +264,8 @@ export default function AdminExport() {
             ))}
           </div>
 
-          <button className="admin-btn admin-btn-primary" onClick={handleExport} disabled={isLoading} style={{ width: "100%", padding: "12px 20px", fontSize: 15 }}>
-            {isLoading ? "Exporting..." : "Export CSV"}
+          <button className="admin-btn admin-btn-primary" onClick={handleExport} disabled={exporting} style={{ width: "100%", padding: "12px 20px", fontSize: 15 }}>
+            {exporting ? "Downloading..." : "Export CSV"}
           </button>
         </div>
 

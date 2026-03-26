@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { useLoaderData, useSubmit, useNavigation, Link } from "@remix-run/react";
+import { useLoaderData, useSubmit, useNavigation, useActionData, Link } from "@remix-run/react";
 import { useState, useCallback } from "react";
 import { requireAppAuth } from "../services/app-auth.server";
 import prisma from "../db.server";
@@ -34,26 +34,36 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const intent = formData.get("intent") as string;
 
   if (intent === "create") {
-    const email = formData.get("email") as string;
-    const name = formData.get("name") as string;
-    const phone = (formData.get("phone") as string) || null;
-    const designation = (formData.get("designation") as string) || null;
-    const permissions = JSON.parse(formData.get("permissions") as string || "{}");
-    const locationIds = JSON.parse(formData.get("locations") as string || "[]") as string[];
+    const email = (formData.get("email") as string || "").trim().toLowerCase();
+    const name = (formData.get("name") as string || "").trim();
+    const phone = (formData.get("phone") as string || "").trim() || null;
+    const designation = (formData.get("designation") as string || "").trim() || null;
 
-    // Check limits
-    const usage = await prisma.billingUsage.findUnique({ where: { shop } });
+    if (!email || !name) return json({ error: "Name and email are required" }, { status: 400 });
+
+    let permissions: Record<string, boolean> = {};
+    try { permissions = JSON.parse(formData.get("permissions") as string || "{}"); } catch { /* ignore */ }
+    let locationIds: string[] = [];
+    try { locationIds = JSON.parse(formData.get("locations") as string || "[]"); } catch { /* ignore */ }
+
+    // Check limits — ensure billing record exists
+    const usage = await prisma.billingUsage.upsert({
+      where: { shop },
+      update: {},
+      create: { shop, usersUsed: 1, usersLimit: 1, billingCycleEnd: new Date(Date.now() + 30 * 86400000) },
+    });
     const currentCount = await prisma.appUser.count({ where: { shop } });
-    if (usage && currentCount >= usage.usersLimit) {
-      return json({ error: "User limit reached. Upgrade your plan." }, { status: 400 });
+    if (currentCount >= usage.usersLimit) {
+      return json({ error: `User limit reached (${usage.usersLimit}). Upgrade your plan to add more users.` }, { status: 400 });
     }
 
     // Check duplicate
-    const existing = await prisma.appUser.findUnique({ where: { shop_email: { shop, email } } });
+    const existing = await prisma.appUser.findFirst({ where: { shop, email } });
     if (existing) return json({ error: "User with this email already exists" }, { status: 400 });
 
     // Generate invite token
-    const inviteToken = crypto.randomUUID();
+    const { randomUUID } = await import("crypto");
+    const inviteToken = randomUUID();
 
     await prisma.appUser.create({
       data: {
@@ -94,6 +104,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 export default function CreateUser() {
   const { locations } = useLoaderData<typeof loader>();
+  const actionData = useActionData<any>();
   const submit = useSubmit();
   const navigation = useNavigation();
   const isLoading = navigation.state !== "idle";
@@ -158,6 +169,12 @@ export default function CreateUser() {
           {isLoading ? "Creating..." : "Create User"}
         </button>
       </div>
+
+      {actionData?.error && (
+        <div className="admin-banner" style={{ background: "#fef2f2", color: "#dc2626", padding: "12px 16px", borderRadius: 8, marginBottom: 16, fontSize: 14 }}>
+          {actionData.error}
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24 }}>
         <div>
