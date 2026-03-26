@@ -461,6 +461,90 @@ body {
   margin-bottom: 16px;
 }
 
+/* ── Bank Details Form ── */
+.bank-details-form {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease;
+}
+.bank-details-form.expanded {
+  max-height: 800px;
+}
+.bank-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 480px) {
+  .bank-field-row { grid-template-columns: 1fr; }
+}
+.bank-verified {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--portal-success);
+  margin-top: 4px;
+}
+
+/* ── Smart Nudge Cards ── */
+.nudge-card {
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  animation: slideDown 0.3s ease;
+  position: relative;
+}
+.nudge-exchange {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+}
+.nudge-credit {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+}
+.nudge-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.nudge-amount-comparison {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 10px 0;
+  font-size: 14px;
+}
+.nudge-bonus {
+  background: #D1FAE5;
+  color: #065F46;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.nudge-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.nudge-dismiss {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9CA3AF;
+  font-size: 18px;
+  padding: 0;
+  line-height: 1;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Responsive ── */
 @media (max-width: 480px) {
   .portal-main {

@@ -90,6 +90,8 @@ model ReturnRequest {
   // Self-ship tracking
   trackingUrl         String?
   carrierName         String?
+  // Bank transfer details (encrypted JSON)
+  bankDetails         String?
   // Auto-action tracking
   autoAction          String?
   // Additional fields

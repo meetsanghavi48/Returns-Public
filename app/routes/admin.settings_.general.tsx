@@ -93,6 +93,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     portal_banner_url: (formData.get("portal_banner_url") as string) || "",
     tax_rate_pct: parseFloat(formData.get("tax_rate_pct") as string) || 0,
     exchange_shipping_fee: parseFloat(formData.get("exchange_shipping_fee") as string) || 0,
+    nudge_exchange_enabled: formData.get("nudge_exchange_enabled") === "true",
+    nudge_store_credit_enabled: formData.get("nudge_store_credit_enabled") === "true",
+    nudge_exchange_bonus: parseFloat(formData.get("nudge_exchange_bonus") as string) || 0,
+    nudge_store_credit_bonus: parseFloat(formData.get("nudge_store_credit_bonus") as string) || 0,
+    nudge_exchange_message: (formData.get("nudge_exchange_message") as string) || "",
+    nudge_store_credit_message: (formData.get("nudge_store_credit_message") as string) || "",
     store_email: (formData.get("store_email") as string) || "",
     store_phone: (formData.get("store_phone") as string) || "",
   };
@@ -146,6 +152,13 @@ export default function GeneralSettings() {
     portal_banner_url: String(s.portal_banner_url || ""),
     // Fees
     exchange_shipping_fee: String(s.exchange_shipping_fee ?? 0),
+    // Nudges
+    nudge_exchange_enabled: Boolean(s.nudge_exchange_enabled ?? true),
+    nudge_store_credit_enabled: Boolean(s.nudge_store_credit_enabled ?? true),
+    nudge_exchange_bonus: String(s.nudge_exchange_bonus ?? 0),
+    nudge_store_credit_bonus: String(s.nudge_store_credit_bonus ?? 0),
+    nudge_exchange_message: String(s.nudge_exchange_message || ""),
+    nudge_store_credit_message: String(s.nudge_store_credit_message || ""),
     // Tax
     tax_rate_pct: String(s.tax_rate_pct ?? 0),
     // Store Info
@@ -449,6 +462,61 @@ export default function GeneralSettings() {
                 Preview your returns page ↗
               </a>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Customer Incentives & Nudges */}
+      <div className="settings-section-row">
+        <div className="settings-section-left">
+          <h3 className="settings-section-title">Customer Incentives</h3>
+          <p className="settings-section-desc">
+            Influence customer decisions by suggesting exchanges or store credit with optional bonus amounts.
+          </p>
+        </div>
+        <div className="settings-section-right">
+          <div className="admin-card">
+            <label className="toggle-switch" style={{ marginBottom: 12 }}>
+              <input type="checkbox" checked={form.nudge_exchange_enabled} onChange={(e) => u("nudge_exchange_enabled", e.target.checked)} />
+              <span className="toggle-slider" />
+              <span className="toggle-label">Suggest exchange instead of return</span>
+            </label>
+            {form.nudge_exchange_enabled && (
+              <div style={{ marginLeft: 8, marginBottom: 16 }}>
+                <div className="admin-form-row">
+                  <div className="admin-form-group">
+                    <label className="admin-label">Exchange bonus amount</label>
+                    <input className="admin-input" type="number" value={form.nudge_exchange_bonus} onChange={(e) => u("nudge_exchange_bonus", e.target.value)} style={{ width: 120 }} />
+                    <p className="admin-help">Extra credit customers get if they choose exchange</p>
+                  </div>
+                  <div className="admin-form-group">
+                    <label className="admin-label">Custom message (optional)</label>
+                    <input className="admin-input" value={form.nudge_exchange_message} onChange={(e) => u("nudge_exchange_message", e.target.value)} placeholder="e.g. Exchange now and save on shipping!" />
+                  </div>
+                </div>
+              </div>
+            )}
+            <hr className="admin-divider" />
+            <label className="toggle-switch" style={{ marginTop: 12, marginBottom: 12 }}>
+              <input type="checkbox" checked={form.nudge_store_credit_enabled} onChange={(e) => u("nudge_store_credit_enabled", e.target.checked)} />
+              <span className="toggle-slider" />
+              <span className="toggle-label">Suggest store credit instead of refund</span>
+            </label>
+            {form.nudge_store_credit_enabled && (
+              <div style={{ marginLeft: 8 }}>
+                <div className="admin-form-row">
+                  <div className="admin-form-group">
+                    <label className="admin-label">Store credit bonus amount</label>
+                    <input className="admin-input" type="number" value={form.nudge_store_credit_bonus} onChange={(e) => u("nudge_store_credit_bonus", e.target.value)} style={{ width: 120 }} />
+                    <p className="admin-help">Extra amount added to store credit</p>
+                  </div>
+                  <div className="admin-form-group">
+                    <label className="admin-label">Custom message (optional)</label>
+                    <input className="admin-input" value={form.nudge_store_credit_message} onChange={(e) => u("nudge_store_credit_message", e.target.value)} placeholder="e.g. Get instant credit for your next purchase!" />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
