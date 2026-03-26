@@ -1,6 +1,7 @@
 import prisma from "../db.server";
 import { shopifyREST, updateOrderTags } from "./shopify.server";
 import { auditLog } from "./audit.server";
+import { getSetting } from "./settings.server";
 
 // Get next exchange number for a shop (atomic increment)
 async function getNextExcNumber(shop: string): Promise<number> {
@@ -99,6 +100,34 @@ export async function createExchangeOrder(
       "exchange-fulfilled",
       excTag,
     ]);
+
+    // Hold exchange order if setting enabled
+    const holdOrders = await getSetting<boolean>(shop, "exchange_hold_orders", false);
+    if (holdOrders && newOid) {
+      try {
+        await updateOrderTags(shop, accessToken, newOid, ["exchange-on-hold"]);
+        // Add hold note
+        await shopifyREST(shop, accessToken, "PUT", `orders/${newOid}.json`, {
+          order: { id: newOid, note_attributes: [{ name: "on_hold", value: "true" }] },
+        });
+      } catch (e) { /* skip hold errors */ }
+    }
+
+    // Auto refund price difference if enabled and new is cheaper
+    const autoRefundDiff = await getSetting<boolean>(shop, "refund_price_difference", false);
+    const restrictRefundDiff = await getSetting<boolean>(shop, "capture_payment_price_diff", false);
+    if (autoRefundDiff) {
+      const origPrice = exchItems.reduce((s: number, i: any) => s + (parseFloat(i.price || 0) * (parseInt(i.qty) || 1)), 0);
+      const newPrice = exchItems.reduce((s: number, i: any) => {
+        const ep = parseFloat(i.exchange_price || i.price || 0);
+        return s + ep * (parseInt(i.qty) || 1);
+      }, 0);
+      if (newPrice < origPrice) {
+        const diff = origPrice - newPrice;
+        await auditLog(shop, request.orderId, request.reqId, "exchange_price_diff_refund", "system", `Price diff refund: ${diff.toFixed(2)}`);
+      }
+    }
+
     await auditLog(
       shop,
       request.orderId,
@@ -106,9 +135,6 @@ export async function createExchangeOrder(
       "exchange_created",
       "system",
       `${excTag} (Shopify:${newName}) orderId:${newOid}`,
-    );
-    console.log(
-      `[Exchange] Created ${excTag} (${newName}) for ${request.reqId}`,
     );
     return {
       order_id: newOid,

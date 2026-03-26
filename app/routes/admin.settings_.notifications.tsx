@@ -221,6 +221,13 @@ export default function SettingsNotifications() {
       <NotificationTable title="Refund Notifications" subtitle="Manage notifications for refund processed. Click on the pencil icon to edit the content." events={REFUND_EVENTS} notifications={notifications} onToggle={handleToggle} />
       <NotificationTable title="Other Notifications" subtitle="These notifications are automatically sent to the customer via notifications of every new activity." events={OTHER_EVENTS} notifications={notifications} onToggle={handleToggle} />
 
+      {/* Bottom save */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--admin-border)" }}>
+        <button className="admin-btn admin-btn-primary" onClick={handleSaveSender} disabled={isLoading}>
+          {isLoading ? "Saving..." : "Save"}
+        </button>
+      </div>
+
       {/* Sender Modal */}
       {showSenderModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>

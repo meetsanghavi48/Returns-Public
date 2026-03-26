@@ -12,7 +12,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const settings = await getAllSettings(shop);
   const shopConfig = await prisma.shop.findUnique({ where: { shop } });
   const appUrl = process.env.SHOPIFY_APP_URL || "";
-  return json({ settings, shopConfig, shop, appUrl });
+
+  // Check if snippet is installed on theme
+  let snippetInstalled = false;
+  try {
+    const themesRes = await shopifyREST(shop, accessToken, "GET", "/themes.json");
+    const activeTheme = (themesRes?.themes || []).find((t: any) => t.role === "main");
+    if (activeTheme) {
+      const asset = await shopifyREST(shop, accessToken, "GET", `/themes/${activeTheme.id}/assets.json?asset[key]=snippets/returns-manager.liquid`);
+      snippetInstalled = !!asset?.asset?.value;
+    }
+  } catch { /* snippet not found */ }
+
+  return json({ settings, shopConfig, shop, appUrl, snippetInstalled });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -37,18 +49,28 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         asset: { key: "snippets/returns-manager.liquid", value: snippetContent },
       });
 
-      // Try to auto-inject into customer account template
+      // Try to auto-inject into layout/theme.liquid before </body>
       try {
-        const accountAsset = await shopifyREST(shop, accessToken, "GET", `/themes/${activeTheme.id}/assets.json?asset[key]=templates/customers/account.liquid`);
-        const accountContent = accountAsset?.asset?.value || "";
-        if (accountContent && !accountContent.includes("returns-manager")) {
-          const updated = accountContent + "\n{% render 'returns-manager' %}\n";
+        const layoutAsset = await shopifyREST(shop, accessToken, "GET", `/themes/${activeTheme.id}/assets.json?asset[key]=layout/theme.liquid`);
+        const layoutContent = layoutAsset?.asset?.value || "";
+        if (layoutContent && !layoutContent.includes("returns-manager")) {
+          const updated = layoutContent.replace("</body>", "{% render 'returns-manager' %}\n</body>");
           await shopifyREST(shop, accessToken, "PUT", `/themes/${activeTheme.id}/assets.json`, {
-            asset: { key: "templates/customers/account.liquid", value: updated },
+            asset: { key: "layout/theme.liquid", value: updated },
           });
         }
       } catch (e) {
-        // Template might be JSON-based (newer themes) — that's OK, snippet is still installed
+        // Fallback: try customer account template
+        try {
+          const accountAsset = await shopifyREST(shop, accessToken, "GET", `/themes/${activeTheme.id}/assets.json?asset[key]=templates/customers/account.liquid`);
+          const accountContent = accountAsset?.asset?.value || "";
+          if (accountContent && !accountContent.includes("returns-manager")) {
+            const updated = accountContent + "\n{% render 'returns-manager' %}\n";
+            await shopifyREST(shop, accessToken, "PUT", `/themes/${activeTheme.id}/assets.json`, {
+              asset: { key: "templates/customers/account.liquid", value: updated },
+            });
+          }
+        } catch { /* Template might be JSON-based (newer themes) — that's OK, snippet is still installed */ }
       }
 
       await setSetting(shop, "account_snippet_enabled", true);
@@ -70,6 +92,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     portal_button_color: (formData.get("portal_button_color") as string) || "#C84B31",
     portal_banner_url: (formData.get("portal_banner_url") as string) || "",
     tax_rate_pct: parseFloat(formData.get("tax_rate_pct") as string) || 0,
+    exchange_shipping_fee: parseFloat(formData.get("exchange_shipping_fee") as string) || 0,
     store_email: (formData.get("store_email") as string) || "",
     store_phone: (formData.get("store_phone") as string) || "",
   };
@@ -95,7 +118,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function GeneralSettings() {
-  const { settings, shopConfig, shop, appUrl } = useLoaderData<typeof loader>();
+  const { settings, shopConfig, shop, appUrl, snippetInstalled } = useLoaderData<typeof loader>();
   const actionData = useActionData<any>();
   const submit = useSubmit();
   const navigation = useNavigation();
@@ -121,6 +144,8 @@ export default function GeneralSettings() {
     // Customization
     portal_button_color: String(s.portal_button_color || "#C84B31"),
     portal_banner_url: String(s.portal_banner_url || ""),
+    // Fees
+    exchange_shipping_fee: String(s.exchange_shipping_fee ?? 0),
     // Tax
     tax_rate_pct: String(s.tax_rate_pct ?? 0),
     // Store Info
@@ -228,8 +253,8 @@ export default function GeneralSettings() {
               <span style={{ fontSize: 14 }}>
                 The snippet is <strong>{form.account_snippet_enabled ? "Enabled" : "Disabled"}</strong> on your store.
               </span>
-              <span className={`admin-badge ${form.account_snippet_enabled ? "delivered" : "pending"}`}>
-                {form.account_snippet_enabled ? "Installed" : "Not Installed"}
+              <span className={`admin-badge ${snippetInstalled ? "delivered" : "pending"}`}>
+                {snippetInstalled ? "Installed" : "Not Installed"}
               </span>
             </div>
             <label className="toggle-switch">
@@ -510,6 +535,34 @@ export default function GeneralSettings() {
         </div>
       </div>
 
+      {/* Exchange Shipping Fee */}
+      <div className="settings-section-row">
+        <div className="settings-section-left">
+          <h3 className="settings-section-title">Shipping & Fees</h3>
+          <p className="settings-section-desc">
+            Configure shipping fees and restocking fees for returns and exchanges.
+          </p>
+        </div>
+        <div className="settings-section-right">
+          <div className="admin-card">
+            <div className="admin-form-row">
+              <div className="admin-form-group">
+                <label className="admin-label">Return Shipping Fee</label>
+                <input className="admin-input" type="number" value={form.return_shipping_fee} onChange={(e) => u("return_shipping_fee", e.target.value)} />
+              </div>
+              <div className="admin-form-group">
+                <label className="admin-label">Exchange Shipping Fee</label>
+                <input className="admin-input" type="number" value={form.exchange_shipping_fee} onChange={(e) => u("exchange_shipping_fee", e.target.value)} />
+              </div>
+            </div>
+            <div className="admin-form-group" style={{ marginTop: 8 }}>
+              <label className="admin-label">Restocking Fee (%)</label>
+              <input className="admin-input" type="number" value={form.restocking_fee_pct} onChange={(e) => u("restocking_fee_pct", e.target.value)} style={{ width: 120 }} />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Warehouse */}
       <div className="settings-section-row">
         <div className="settings-section-left">
@@ -550,6 +603,13 @@ export default function GeneralSettings() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Bottom Save */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--admin-border)" }}>
+        <button className="admin-btn admin-btn-primary" onClick={handleSave} disabled={isLoading}>
+          {isLoading ? "Saving..." : "Save"}
+        </button>
       </div>
     </>
   );

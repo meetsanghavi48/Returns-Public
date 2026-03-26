@@ -73,7 +73,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       create: { shop, usersUsed: newCount, billingCycleEnd: new Date(Date.now() + 30 * 86400000) },
     });
 
-    // TODO: Send invitation email via SendGrid
+    // Send invitation email
+    try {
+      const { sendNotification } = await import("../services/email-templates.server");
+      const appUrl = process.env.SHOPIFY_APP_URL || "";
+      await sendNotification(shop, "user_invite", null, {
+        customer_name: name,
+        customer_email: email,
+        invite_url: `${appUrl}/accept-invite/${inviteToken}`,
+        shop_name: shop,
+      });
+    } catch (e) {
+      // Silently fail — user is still created
+    }
     return redirect("/admin/settings/users");
   }
 

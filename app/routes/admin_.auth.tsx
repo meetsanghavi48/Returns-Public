@@ -21,12 +21,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Verify shop exists and has a valid access token
     const shopRecord = await prisma.shop.findUnique({ where: { shop: shopParam } });
     if (shopRecord && shopRecord.accessToken && !shopRecord.uninstalledAt) {
+      // Check if owner exists
+      const owner = await prisma.appUser.findFirst({ where: { shop: shopParam, role: "owner" } });
+      if (!owner) {
+        return redirect(`/admin/signup?shop=${shopParam}`);
+      }
       return createAdminSession(shopParam, "/admin/dashboard");
     }
   }
 
-  // No session, no shop param — show login form
-  return json({ needsLogin: true });
+  // No session, no shop param — redirect to login
+  return redirect("/admin/login");
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -41,6 +46,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   // Check if shop exists and is installed
   const shopRecord = await prisma.shop.findUnique({ where: { shop: normalizedShop } });
   if (shopRecord && shopRecord.accessToken && !shopRecord.uninstalledAt) {
+    const owner = await prisma.appUser.findFirst({ where: { shop: normalizedShop, role: "owner" } });
+    if (!owner) {
+      return redirect(`/admin/signup?shop=${normalizedShop}`);
+    }
     return createAdminSession(normalizedShop, "/admin/dashboard");
   }
 

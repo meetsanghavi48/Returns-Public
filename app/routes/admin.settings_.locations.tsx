@@ -175,6 +175,13 @@ export default function SettingsLocations() {
         </div>
       </div>
 
+      {/* Bottom save */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--admin-border)" }}>
+        <button className="admin-btn admin-btn-primary" onClick={openAdd} disabled={isLoading}>
+          {isLoading ? "Saving..." : "Save"}
+        </button>
+      </div>
+
       {/* Add/Edit Modal */}
       {showModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>

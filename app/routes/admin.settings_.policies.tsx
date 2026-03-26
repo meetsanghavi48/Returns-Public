@@ -115,17 +115,14 @@ export default function PoliciesSettings() {
     mark_cod_delivery_refunded: s.mark_cod_delivery_refunded ?? false,
     // Discount expire
     auto_expire_discount: s.auto_expire_discount ?? false,
-    // Shipping charges
-    return_shipping_fee: s.return_shipping_fee ?? 100,
-    exchange_shipping_fee: s.exchange_shipping_fee ?? 0,
+    // Shipping charges (managed in General settings now)
     // Gift returns
     gift_returns_enabled: s.gift_returns_enabled ?? false,
     gift_card_refund: s.gift_card_refund ?? false,
     gift_card_exchange: s.gift_card_exchange ?? false,
     // Exchange profile
     exchange_order_suffix: s.exchange_order_suffix ?? "",
-    // Restocking
-    restocking_fee_pct: s.restocking_fee_pct ?? 0,
+    // Restocking (managed in General settings now)
     // Discount on original order
     restrict_discount_on_original: s.restrict_discount_on_original ?? false,
   });
@@ -423,22 +420,11 @@ export default function PoliciesSettings() {
           <p className="admin-help" style={{ marginTop: 8 }}>You can turn it on/off if you wish to not search for auto expiring any discount codes.</p>
         </section>
 
-        {/* Shipping Charges */}
+        {/* Shipping Charges — managed in General settings */}
         <section id="shipping-charges" className="admin-card" style={{ marginBottom: 16 }}>
           <h3 className="admin-card-title">Return & Exchange Shipping Charges</h3>
-          <div className="admin-form-row">
-            <div className="admin-form-group">
-              <label className="admin-label">Return Shipping Fee (₹)</label>
-              <input className="admin-input" type="number" value={form.return_shipping_fee} onChange={(e) => u("return_shipping_fee", e.target.value)} />
-            </div>
-            <div className="admin-form-group">
-              <label className="admin-label">Exchange Shipping Fee (₹)</label>
-              <input className="admin-input" type="number" value={form.exchange_shipping_fee} onChange={(e) => u("exchange_shipping_fee", e.target.value)} />
-            </div>
-          </div>
-          <div className="admin-form-group" style={{ marginTop: 8 }}>
-            <label className="admin-label">Restocking Fee (%)</label>
-            <input className="admin-input" type="number" value={form.restocking_fee_pct} onChange={(e) => u("restocking_fee_pct", e.target.value)} style={{ width: 120 }} />
+          <div className="admin-banner info">
+            Shipping fees and restocking fees are now configured in <a href="/admin/settings/general" style={{ color: "var(--admin-accent)" }}>General Settings</a>.
           </div>
         </section>
 
@@ -484,6 +470,13 @@ export default function PoliciesSettings() {
             <span className="toggle-label">Do not count the discount amount from the original order while returning the item</span>
           </label>
         </section>
+
+        {/* Bottom Save */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--admin-border)" }}>
+          <button className="admin-btn admin-btn-primary" onClick={handleSave} disabled={isLoading}>
+            {isLoading ? "Saving..." : "Save"}
+          </button>
+        </div>
       </div>
 
       {/* Quick Links Sidebar */}

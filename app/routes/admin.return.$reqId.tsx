@@ -44,11 +44,12 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   // Get settings
   const returnShippingFee = await getSetting(shop, "return_shipping_fee", 100);
   const restockingFeePct = await getSetting(shop, "restocking_fee_pct", 0);
+  const taxRatePct = await getSetting(shop, "tax_rate_pct", 0);
 
   // Get store currency
   const currency = orderDetails?.currency || "USD";
 
-  return json({ returnReq, auditLogs, orderRequests, orderDetails, returnShippingFee, restockingFeePct, currency });
+  return json({ returnReq, auditLogs, orderRequests, orderDetails, returnShippingFee, restockingFeePct, taxRatePct, currency });
 };
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
@@ -74,11 +75,46 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         return json({ ok: true, message: "Pickup created" });
       }
       case "mark_delivered": {
+        const req = await prisma.returnRequest.findFirst({ where: { shop, reqId } });
         await prisma.returnRequest.update({
           where: { reqId, shop },
           data: { status: "delivered" },
         });
         await auditLog(shop, null, reqId, "mark_delivered", "admin", "Marked as received/delivered");
+        // Inventory adjustment
+        const autoInventory = await getSetting(shop, "inventory_restock_on_receive", false);
+        if (autoInventory && req) {
+          try {
+            const returnedItems = ((req.items as any[]) || []).filter((i: any) => i.action === "return");
+            // Get primary location
+            const locs = await shopifyREST(shop, accessToken, "GET", "locations.json?active=true&limit=1");
+            const locId = locs?.locations?.[0]?.id;
+            if (locId) {
+              for (const item of returnedItems) {
+                if (item.variant_id) {
+                  try {
+                    const varData = await shopifyREST(shop, accessToken, "GET", `variants/${item.variant_id}.json?fields=inventory_item_id`);
+                    const invItemId = varData?.variant?.inventory_item_id;
+                    if (invItemId) {
+                      await shopifyREST(shop, accessToken, "POST", "inventory_levels/adjust.json", {
+                        location_id: locId, inventory_item_id: invItemId, available_adjustment: parseInt(item.qty) || 1,
+                      });
+                    }
+                  } catch (e) { /* skip individual item errors */ }
+                }
+              }
+              await auditLog(shop, null, reqId, "inventory_adjusted", "system", `Restocked ${returnedItems.length} item(s)`);
+            }
+          } catch (e) { /* skip inventory errors */ }
+        }
+        // Update Shopify tags
+        const tagOrders = await getSetting(shop, "sync_returns_shopify", true);
+        if (tagOrders && req) {
+          try {
+            const { updateOrderTags } = await import("../services/shopify.server");
+            await updateOrderTags(shop, accessToken, req.orderId, ["return-received"], ["return-in-progress"]);
+          } catch (e) { /* skip */ }
+        }
         return json({ ok: true, message: "Marked as received" });
       }
       case "process_refund": {
@@ -141,6 +177,10 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         await auditLog(shop, null, reqId, "awb_attached", "admin", `AWB:${awb}`);
         return json({ ok: true, message: `AWB ${awb} attached` });
       }
+      case "mark_paid": {
+        await auditLog(shop, null, reqId, "payment_marked_paid", "admin", "Exchange payment marked as paid manually");
+        return json({ ok: true, message: "Payment marked as paid" });
+      }
       case "add_utr": {
         const utr = formData.get("utr") as string;
         if (!utr) return json({ error: "UTR required" }, { status: 400 });
@@ -188,7 +228,7 @@ function timeAgo(date: string) {
 }
 
 export default function AdminReturnDetail() {
-  const { returnReq, auditLogs, orderRequests, orderDetails, returnShippingFee, restockingFeePct, currency } = useLoaderData<typeof loader>();
+  const { returnReq, auditLogs, orderRequests, orderDetails, returnShippingFee, restockingFeePct, taxRatePct, currency } = useLoaderData<typeof loader>();
   const currencySymbols: Record<string, string> = { INR: "₹", USD: "$", EUR: "€", GBP: "£", AUD: "A$", CAD: "C$", JPY: "¥", SGD: "S$", AED: "AED " };
   const cs = currencySymbols[currency] || currency + " ";
   const actionData = useActionData<any>();
@@ -231,7 +271,8 @@ export default function AdminReturnDetail() {
   const discTotal = origTotal - netTotal;
   const retFee = r.refundMethod === "store_credit" ? 0 : Number(returnShippingFee);
   const restockFee = Number(restockingFeePct) > 0 ? netTotal * (Number(restockingFeePct) / 100) : 0;
-  const totalRefund = Math.max(0, netTotal - retFee - restockFee);
+  const taxAmount = Number(taxRatePct) > 0 ? (netTotal * Number(taxRatePct)) / 100 : 0;
+  const totalRefund = Math.max(0, netTotal - retFee - restockFee + taxAmount);
 
   const doAction = (intent: string, extra?: Record<string, string>) => {
     const fd = new FormData();
@@ -537,6 +578,13 @@ export default function AdminReturnDetail() {
                     <td></td>
                     <td className="dp-refund-amount">- {cs}{retFee.toFixed(2)}</td>
                   </tr>
+                  {taxAmount > 0 && (
+                    <tr>
+                      <td>Tax ({taxRatePct}%)</td>
+                      <td></td>
+                      <td className="dp-refund-amount" style={{ color: "var(--admin-success)" }}>+ {cs}{taxAmount.toFixed(2)}</td>
+                    </tr>
+                  )}
                   {restockFee > 0 && (
                     <tr>
                       <td>Restocking Fee ({restockingFeePct}%)</td>
@@ -573,6 +621,39 @@ export default function AdminReturnDetail() {
               )}
             </div>
           )}
+
+          {/* Payment Required (Exchange price diff) */}
+          {isExchange && !isPending && !isRejected && (() => {
+            const origPrice = exchangeItems.reduce((s: number, i: any) => s + (parseFloat(i.price || 0) * (parseInt(i.qty) || 1)), 0);
+            const newPrice = exchangeItems.reduce((s: number, i: any) => {
+              const ep = parseFloat(i.exchange_price || i.price || 0);
+              return s + ep * (parseInt(i.qty) || 1);
+            }, 0);
+            const chargeDiff = newPrice - origPrice;
+            if (chargeDiff <= 0) return null;
+            return (
+              <div className="admin-card">
+                <h3 className="admin-card-title">Payment Required</h3>
+                <hr className="admin-divider" />
+                <p className="admin-item-meta" style={{ marginBottom: 12 }}>Exchange item costs more than the original.</p>
+                <table className="dp-refund-table">
+                  <tbody>
+                    <tr><td>Original item(s)</td><td></td><td className="dp-refund-amount">{cs}{origPrice.toFixed(2)}</td></tr>
+                    <tr><td>New item(s)</td><td></td><td className="dp-refund-amount">{cs}{newPrice.toFixed(2)}</td></tr>
+                    <tr className="dp-refund-total">
+                      <td><strong>Amount due</strong></td><td></td>
+                      <td className="dp-refund-amount" style={{ color: "var(--admin-danger)" }}><strong>{cs}{chargeDiff.toFixed(2)}</strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                  <button className="admin-btn admin-btn-sm admin-btn-primary" onClick={() => doAction("mark_paid")} disabled={isLoading}>
+                    Mark as Paid Manually
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Shopify Actions */}
           {!isPending && !isRejected && !isArchived && (

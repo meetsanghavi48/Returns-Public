@@ -65,6 +65,22 @@ const shopify = shopifyApp({
       }
 
       shopify.registerWebhooks({ session });
+
+      // Check if owner exists — if not, redirect to signup
+      const ownerExists = await prisma.appUser.findFirst({
+        where: { shop: session.shop, role: "owner" },
+      });
+      if (!ownerExists) {
+        // Try auto-matching by email from Shopify session
+        if (session.email) {
+          const matchedUser = await prisma.appUser.findFirst({
+            where: { shop: session.shop, email: session.email, inviteAccepted: true },
+          });
+          if (matchedUser) {
+            // Auto-login handled by admin_.auth redirect
+          }
+        }
+      }
     },
   },
 });

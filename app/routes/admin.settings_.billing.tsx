@@ -219,6 +219,12 @@ export default function SettingsBilling() {
           </tbody>
         </table>
       </div>
+      {/* Bottom save */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--admin-border)" }}>
+        <button className="admin-btn admin-btn-primary" onClick={handleAddCredits} disabled={isLoading}>
+          {isLoading ? "Saving..." : "Save"}
+        </button>
+      </div>
     </div>
   );
 }

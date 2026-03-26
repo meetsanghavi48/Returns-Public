@@ -102,6 +102,7 @@ export default function AdminLayout() {
             <div className="admin-sidebar-shop-dot" />
             <div className="admin-sidebar-shop-name">{shop}</div>
           </div>
+          <a href="/admin/logout" style={{ display: "block", fontSize: 12, color: "#888", textDecoration: "none", marginTop: 8, paddingLeft: 20 }}>Logout</a>
         </div>
       </aside>
 

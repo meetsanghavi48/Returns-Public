@@ -10,7 +10,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 const SETTINGS_CARDS = [
   { icon: "\u2699\uFE0F", title: "General", desc: "View and update your store details", href: "/admin/settings/general" },
-  { icon: "\uD83C\uDF10", title: "Languages", desc: "Show your return portal in multiple languages", href: "/admin/settings/languages" },
   { icon: "\uD83D\uDCCB", title: "Policies", desc: "Manage your returns/exchange policies and rules", href: "/admin/settings/policies" },
   { icon: "\uD83D\uDCCD", title: "Locations", desc: "Setup the locations where you want to receive returned/exchanged products", href: "/admin/settings/locations" },
   { icon: "\uD83D\uDE9A", title: "Logistics", desc: "Manage your logistic integrations", href: "/admin/settings/logistics" },

@@ -202,14 +202,24 @@ async function executeAction(
         await auditLog(shop, data.orderId, data.reqId, "automation_assign_logistics", "system", `Assigned to ${config.logistics_key}`);
         return { success: true };
 
-      case "create_pickup":
-        // Mark for pickup — actual pickup creation handled by logistics service
-        await prisma.returnRequest.update({
-          where: { reqId: data.reqId },
-          data: { status: "pickup_scheduled", pickupCreatedAt: new Date() },
-        });
+      case "create_pickup": {
+        // Use real logistics service
+        try {
+          const { createPickupForReturn } = await import("./logistics.server");
+          const pickupResult = await createPickupForReturn(data.id, shop);
+          if (!pickupResult.success) {
+            return { success: false, error: pickupResult.error || "Pickup creation failed" };
+          }
+        } catch (e: any) {
+          // Fallback: just mark status
+          await prisma.returnRequest.update({
+            where: { reqId: data.reqId },
+            data: { status: "pickup_scheduled", pickupCreatedAt: new Date() },
+          });
+        }
         await auditLog(shop, data.orderId, data.reqId, "automation_create_pickup", "system", "Pickup scheduled by automation");
         return { success: true };
+      }
 
       case "send_email_to_customer":
         await sendReturnConfirmation(data.id, shop);

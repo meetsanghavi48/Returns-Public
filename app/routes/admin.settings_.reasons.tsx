@@ -404,6 +404,16 @@ export default function SettingsReasons() {
         </div>
       </div>
 
+      {/* Bottom save buttons */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--admin-border)", gap: 8 }}>
+        <button className="admin-btn admin-btn-primary" onClick={handleSaveRefundModes} disabled={isLoading}>
+          {isLoading ? "Saving..." : "Save refund modes"}
+        </button>
+        <button className="admin-btn admin-btn-primary" onClick={handleSaveMethods} disabled={isLoading}>
+          {isLoading ? "Saving..." : "Save return methods"}
+        </button>
+      </div>
+
       {/* ═══ Add/Edit Reason Modal ═══ */}
       {showModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
