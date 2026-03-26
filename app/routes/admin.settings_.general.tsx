@@ -8,7 +8,7 @@ import { getAllSettings, setSetting } from "../services/settings.server";
 import { shopifyREST } from "../services/shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { shop } = await requireAdminAuth(request);
+  const { shop, accessToken } = await requireAdminAuth(request);
   const settings = await getAllSettings(shop);
   const shopConfig = await prisma.shop.findUnique({ where: { shop } });
   const appUrl = process.env.SHOPIFY_APP_URL || "";

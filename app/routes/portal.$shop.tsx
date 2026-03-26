@@ -4,8 +4,6 @@ import { Outlet, useLoaderData, useOutletContext } from "@remix-run/react";
 import prisma from "../db.server";
 import { getSetting } from "../services/settings.server";
 import { shopifyREST } from "../services/shopify.server";
-import { isLightColor, darkenColor as darkenColorUtil } from "../utils/colors.server";
-
 import portalStyles from "../styles/portal.css?url";
 
 export const links = () => [
@@ -24,7 +22,8 @@ async function getThemeColors(shop: string, accessToken: string) {
 
     const settingsRes = await shopifyREST(shop, accessToken, "GET",
       `/themes/${activeTheme.id}/assets.json?asset[key]=config/settings_data.json`);
-    const settings = JSON.parse(settingsRes?.asset?.value || "{}");
+    let settings: any = {};
+    try { settings = JSON.parse(settingsRes?.asset?.value || "{}"); } catch { return null; }
     const current = settings?.current || {};
 
     const bgColor =
